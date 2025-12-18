@@ -6,7 +6,7 @@ from enums import Role, Provider
 
 @dataclass
 class Message:
-    """ Single message in conversation history
+    """ Single message in conversation session
 
     Attributes:
         role (str): Role of the message sender (e.g., "user", "model").
@@ -18,8 +18,8 @@ class Message:
     timestamp: str
 
 @dataclass
-class History:
-    """ Conversation history metadata and messages
+class Session:
+    """ Conversation session metadata and messages
 
     Attributes:
         title (str): Title of the conversation.
@@ -34,29 +34,29 @@ class History:
     updated_at: str
     messages: List[Message]
 
-class HistoryManager:
-    """ Manages conversation histories
+class SessionManager:
+    """ Manages conversation session
     Attributes:
-        current_history (History|None): The currently loaded conversation history.
+        current_session (Session|None): The currently loaded conversation session.
     """
     def __init__(self):
-        self.current_history: History|None = None
+        self.current_session: Session|None = None
 
-    def load_history(
+    def load_session(
         self,
         title: str,
         provider: str,
         created_at: str,
         messages: list
-    ) -> History:
-        """ Load conversation history
+    ) -> Session:
+        """ Load conversation session
         Args:
             title (str): Title of the conversation.
             provider (str): Provider of the AI model.
             created_at (str): Creation timestamp of the conversation.
             messages (List[Message]): List of messages in the conversation.
         Returns:
-            History: The created conversation history.
+            Session: The created conversation session.
         """
         # Convert message dicts to Message objects
         message_objs = [Message(**msg) for msg in messages]
@@ -67,30 +67,30 @@ class HistoryManager:
         except ValueError:
             provider = Provider.DEFAULT
 
-        history = History(
+        session = Session(
             title=title,
             provider=provider,
             created_at=created_at,
             updated_at=created_at,
             messages=message_objs
         )
-        self.current_history = history
-        return history
+        self.current_session = session
+        return session
 
-    def create_history(self) -> History:
-        """ Create a new conversation history
+    def create_session(self) -> Session:
+        """ Create a new conversation session
         Returns:
-            History: The created conversation history.
+            Session: The created conversation session.
         """
-        history = History(
+        session = Session(
             title="New Conversation",
             provider=Provider.DEFAULT,
             created_at=datetime.now().isoformat(),
             updated_at=datetime.now().isoformat(),
             messages=[]
         )
-        self.current_history = history
-        return history
+        self.current_session = session
+        return session
 
     def append_message(
             self,
@@ -98,15 +98,15 @@ class HistoryManager:
             _content: str, 
             _timestamp: datetime
     ) -> None:
-        """ Append a message to the current conversation history
+        """ Append a message to the current conversation session
         Args:
             role (str): Role of the message sender (e.g. "user", "model").
             content (str): Content of the message.
             timestamp (str): Timestamp of when the message was sent.
         """
-        # Check if history is loaded
-        if self.current_history is None:
-            self.create_history()
+        # Check if session is loaded
+        if self.current_session is None:
+            self.create_session()
 
         try:
             role: Role = Role(_role)
@@ -117,18 +117,18 @@ class HistoryManager:
         timestamp = _timestamp.isoformat(sep=' ', timespec='seconds')
         message = Message(role=role, content=_content, timestamp=timestamp)
 
-        self.current_history.messages.append(message)
-        self.current_history.updated_at = timestamp
+        self.current_session.messages.append(message)
+        self.current_session.updated_at = timestamp
 
     def delete_last_message(self) -> None:
-        """ Delete the last message from the current conversation history
+        """ Delete the last message from the current conversation session
         """
-        # Check if history is loaded
-        if self.current_history is None:
-            raise ValueError("No conversation history loaded.")
+        # Check if session is loaded
+        if self.current_session is None:
+            raise ValueError("No conversation session loaded.")
 
-        if not self.current_history.messages:
+        if not self.current_session.messages:
             raise ValueError("No messages to delete.")
 
-        self.current_history.messages.pop()
+        self.current_session.messages.pop()
 
