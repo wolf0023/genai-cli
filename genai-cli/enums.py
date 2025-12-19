@@ -4,8 +4,9 @@ class Role(StrEnum):
     """ Enumeration of message roles
     """
     DEFAULT = "user"
+    SYSTEM = "system"
     USER = "user"
-    MODEL = "model"
+    ASSISTANT = "assistant"
 
 class Provider(StrEnum):
     """ Enumeration of AI model providers
