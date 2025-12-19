@@ -8,7 +8,7 @@ class Message:
     """ Single message in conversation session
 
     Attributes:
-        role (Role): Role of the message sender (e.g., "user", "model").
+        role (Role): Role of the message sender (e.g., "user", "assistant").
         content (str): Content of the message.
         timestamp (str): Timestamp of when the message was sent.
     """
@@ -41,7 +41,7 @@ class Session:
     ) -> None:
         """ Append a message to the current conversation session
         Args:
-            role (Role): Role of the message sender (e.g. "user", "model").
+            role (Role): Role of the message sender (e.g. "user", "assistant").
             content (str): Content of the message.
             timestamp (datetime): Timestamp of when the message was sent.
         """
