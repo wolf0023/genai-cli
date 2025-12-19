@@ -1,6 +1,5 @@
-from typing import List
 from dataclasses import dataclass
-from datetime import datetime, time
+from datetime import datetime
 
 from enums import Role, Provider
 
@@ -9,7 +8,7 @@ class Message:
     """ Single message in conversation session
 
     Attributes:
-        role (str): Role of the message sender (e.g., "user", "model").
+        role (Role): Role of the message sender (e.g., "user", "model").
         content (str): Content of the message.
         timestamp (str): Timestamp of when the message was sent.
     """
@@ -23,16 +22,51 @@ class Session:
 
     Attributes:
         title (str): Title of the conversation.
-        provider (str): Provider of the AI model.
+        provider (Provider): Provider of the AI model.
         created_at (str): Creation timestamp of the conversation.
         updated_at (str): Last updated timestamp of the conversation.
-        messages (List[Message]): List of messages in the conversation.
+        messages (list[Message]): List of messages in the conversation.
     """
     title: str
     provider: Provider
     created_at: str
     updated_at: str
-    messages: List[Message]
+    messages: list[Message]
+
+    def append_message(
+            self,
+            role: Role, 
+            content: str, 
+            timestamp: datetime
+    ) -> None:
+        """ Append a message to the current conversation session
+        Args:
+            role (Role): Role of the message sender (e.g. "user", "model").
+            content (str): Content of the message.
+            timestamp (datetime): Timestamp of when the message was sent.
+        """
+        # Create message
+        timestamp_str = timestamp.isoformat(sep=' ', timespec='seconds')
+        message = Message(role=role, content=content, timestamp=timestamp_str)
+
+        self.messages.append(message)
+        self.updated_at = timestamp_str
+
+    def delete_last_message(self) -> bool:
+        """ Delete the last message from the current conversation session
+        Returns:
+            bool: True if a message was deleted, False if there were no messages.
+        """
+        # Check if there are messages to delete
+        if not self.messages:
+            return False
+
+        # Delete the last message
+        self.messages.pop()
+        self.updated_at = datetime.now().isoformat(sep=' ', timespec='seconds')
+
+        return True
+
 
 class SessionManager:
     """ Manages conversation session
@@ -45,36 +79,30 @@ class SessionManager:
     def load_session(
         self,
         title: str,
-        provider: str,
+        provider: Provider,
         created_at: str,
-        messages: list
+        messages: list[Message]
     ) -> Session:
         """ Load conversation session
         Args:
             title (str): Title of the conversation.
-            provider (str): Provider of the AI model.
+            provider (Provider): Provider of the AI model.
             created_at (str): Creation timestamp of the conversation.
-            messages (List[Message]): List of messages in the conversation.
+            messages (list[Message]): List of messages in the conversation.
         Returns:
             Session: The created conversation session.
         """
-        # Convert message dicts to Message objects
-        message_objs = [Message(**msg) for msg in messages]
-
-        # Convert provider string to Provider enum
-        try:
-            provider = Provider(provider)
-        except ValueError:
-            provider = Provider.DEFAULT
-
         session = Session(
             title=title,
             provider=provider,
             created_at=created_at,
             updated_at=created_at,
-            messages=message_objs
+            messages=messages
         )
+
+        # Set current session
         self.current_session = session
+
         return session
 
     def create_session(self) -> Session:
@@ -82,53 +110,27 @@ class SessionManager:
         Returns:
             Session: The created conversation session.
         """
+        # Get current
+        time_now: str = datetime.now().isoformat(' ', timespec='seconds')
+
         session = Session(
             title="New Conversation",
             provider=Provider.DEFAULT,
-            created_at=datetime.now().isoformat(),
-            updated_at=datetime.now().isoformat(),
+            created_at=time_now,
+            updated_at=time_now,
             messages=[]
         )
+        # Set current session
         self.current_session = session
+
         return session
 
-    def append_message(
-            self,
-            _role: str, 
-            _content: str, 
-            _timestamp: datetime
-    ) -> None:
-        """ Append a message to the current conversation session
-        Args:
-            role (str): Role of the message sender (e.g. "user", "model").
-            content (str): Content of the message.
-            timestamp (str): Timestamp of when the message was sent.
+    def get_current_session(self) -> Session:
+        """ Get the current conversation session
+        Returns:
+            Session: The current conversation session.
         """
-        # Check if session is loaded
         if self.current_session is None:
-            self.create_session()
+            return self.create_session()
 
-        try:
-            role: Role = Role(_role)
-        except ValueError:
-            role: Role = Role.DEFAULT
-
-        # Create message
-        timestamp = _timestamp.isoformat(sep=' ', timespec='seconds')
-        message = Message(role=role, content=_content, timestamp=timestamp)
-
-        self.current_session.messages.append(message)
-        self.current_session.updated_at = timestamp
-
-    def delete_last_message(self) -> None:
-        """ Delete the last message from the current conversation session
-        """
-        # Check if session is loaded
-        if self.current_session is None:
-            raise ValueError("No conversation session loaded.")
-
-        if not self.current_session.messages:
-            raise ValueError("No messages to delete.")
-
-        self.current_session.messages.pop()
-
+        return self.current_session
