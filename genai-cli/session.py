@@ -162,9 +162,11 @@ class SessionManager:
         """ Get the current conversation session
         Returns:
             Session: The current conversation session.
+        Raises:
+            ValueError: If no session is currently loaded.
         """
         if self.current_session is None:
-            return self.create_session()
+            raise ValueError("No session is currently loaded.")
 
         return self.current_session
 
