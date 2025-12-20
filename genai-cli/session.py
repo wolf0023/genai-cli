@@ -26,12 +26,14 @@ class Session:
         created_at (str): Creation timestamp of the conversation.
         updated_at (str): Last updated timestamp of the conversation.
         messages (list[Message]): List of messages in the conversation.
+        filename (str|None): Optional filename that is associated with the session.
     """
     title: str
     provider: Provider
     created_at: str
     updated_at: str
     messages: list[Message]
+    filename: str|None = None
 
     def append_message(
             self,
@@ -100,7 +102,8 @@ class SessionManager:
         title: str,
         provider: str,
         created_at: str,
-        messages: list[dict[str, str]]
+        messages: list[dict[str, str]],
+        filename: str|None = None
     ) -> Session:
         """ Load conversation session
         Args:
@@ -108,6 +111,7 @@ class SessionManager:
             provider (str): Provider of the AI model.
             created_at (str): Creation timestamp of the conversation.
             messages (list[dict[str, str]]): List of messages in the conversation.
+            filename (str|None): Optional filename that is associated with the session.
         Returns:
             Session: The created conversation session.
         """
@@ -130,7 +134,8 @@ class SessionManager:
             provider=provider_enum,
             created_at=created_at,
             updated_at=created_at,
-            messages=transformed_messages
+            messages=transformed_messages,
+            filename=filename
         )
 
         # Set current session
