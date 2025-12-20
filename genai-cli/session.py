@@ -67,6 +67,25 @@ class Session:
 
         return True
 
+    def to_dict(self) -> dict[str, str|list[dict[str, str]]]:
+        """ Convert the session to a dictionary format
+        Returns:
+            dict[str, str|list[dict[str, str]]]: Dictionary representation of the session.
+        """
+        return {
+            "title": self.title,
+            "provider": self.provider.value,
+            "created_at": self.created_at,
+            "updated_at": self.updated_at,
+            "messages": [
+                {
+                    "role": message.role.value,
+                    "content": message.content,
+                    "timestamp": message.timestamp
+                }
+                for message in self.messages
+            ]
+        }
 
 class SessionManager:
     """ Manages conversation session
@@ -79,25 +98,39 @@ class SessionManager:
     def load_session(
         self,
         title: str,
-        provider: Provider,
+        provider: str,
         created_at: str,
-        messages: list[Message]
+        messages: list[dict[str, str]]
     ) -> Session:
         """ Load conversation session
         Args:
             title (str): Title of the conversation.
-            provider (Provider): Provider of the AI model.
+            provider (str): Provider of the AI model.
             created_at (str): Creation timestamp of the conversation.
-            messages (list[Message]): List of messages in the conversation.
+            messages (list[dict[str, str]]): List of messages in the conversation.
         Returns:
             Session: The created conversation session.
         """
+        # Transform provider string to Provider enum
+        provider_enum: Provider = Provider(provider)
+
+        # Transform messages to Message dataclass instances
+        transformed_messages: list[Message] = []
+        for msg in messages:
+            transformed_messages.append(
+                Message(
+                    role=Role(msg["role"]),
+                    content=msg["content"],
+                    timestamp=msg["timestamp"]
+                )
+            )
+
         session = Session(
             title=title,
-            provider=provider,
+            provider=provider_enum,
             created_at=created_at,
             updated_at=created_at,
-            messages=messages
+            messages=transformed_messages
         )
 
         # Set current session
@@ -134,3 +167,11 @@ class SessionManager:
             return self.create_session()
 
         return self.current_session
+
+    def clear_session(self) -> None:
+        """ Clear the current conversation session
+        Note:
+            This does not delete the session from storage; it only clears the in-memory reference.
+        """
+        self.current_session = None
+
