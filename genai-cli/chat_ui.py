@@ -9,6 +9,9 @@ from enums import Role
 
 class ChatUI:
     """ Chat UI class for rendering messages to the console.
+    Attributes:
+        console (Console): The rich console for rendering messages.
+        prompt_session (PromptSession): The prompt session for user input.
     """
     def __init__(self):
         self.console = Console()
