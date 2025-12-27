@@ -6,6 +6,7 @@ from session import SessionManager
 from history import HistoryStorage
 from enums import Role
 from chat_ui import ChatUI
+from config.model import ModelConfig
 
 class ChatApp:
     """ Chat application class for managing the chat UI.
@@ -18,6 +19,10 @@ class ChatApp:
         self.session_manager = SessionManager()
         self.history_storage = HistoryStorage()
         self.ui = ChatUI()
+        self.model_config = ModelConfig()
+
+        # Load available models from configuration
+        self.model_config.load_models()
 
     def main_loop(self) -> bool:
         """ Main chat loop for user interaction.
@@ -37,10 +42,11 @@ class ChatApp:
             with self.ui.waiting_indicator():
                 # Get chat history
                 history = self.session_manager.current_session.messages
+                model = self.model_config.get_model(self.session_manager.current_session.model)
 
                 # Get AI response
                 response = get_chat_response(
-                    model="perplexity/sonar-pro",
+                    model=model.model_id,
                     system_prompt="You are a helpful AI assistant.",
                     user_prompt=create_user_prompt(
                         user_input, 

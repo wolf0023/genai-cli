@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 
-from enums import Role, Provider
+from enums import Role
 
 @dataclass
 class Message:
@@ -54,14 +54,14 @@ class Session:
 
     Attributes:
         title (str): Title of the conversation.
-        provider (Provider): Provider of the AI model.
+        model (str): AI model used in the conversation.
         created_at (str): Creation timestamp of the conversation.
         updated_at (str): Last updated timestamp of the conversation.
         messages (list[Message]): List of messages in the conversation.
         filename (str|None): Optional filename that is associated with the session.
     """
     title: str
-    provider: Provider
+    model: str
     created_at: str
     updated_at: str
     messages: list[Message]
@@ -71,7 +71,7 @@ class Session:
     def create_obj(
         cls,
         title: str,
-        provider: str,
+        model: str,
         created_at: str,
         updated_at: str,
         messages: list[dict[str, str]],
@@ -80,8 +80,8 @@ class Session:
         """ Create a Session instance from given parameters
         Args:
             title (str): Title of the conversation.
-            provider (str): Provider of the AI model.
-            provider (str): Creation timestamp of the conversation.
+            model (str): AI model used in the conversation.
+            created_at (str): Creation timestamp of the conversation.
             updated_at (str): Last updated timestamp of the conversation.
             messages (list[dict[str, str]]): List of messages in the conversation.
             filename (str|None): Optional filename that is associated with the session.
@@ -93,7 +93,7 @@ class Session:
 
         return cls(
             title=title,
-            provider=Provider(provider),
+            model=model,
             created_at=created_at,
             updated_at=updated_at,
             messages=message_objects,
@@ -141,7 +141,7 @@ class Session:
         """
         return {
             "title": self.title,
-            "provider": self.provider.value,
+            "model": self.model,
             "created_at": self.created_at,
             "updated_at": self.updated_at,
             "messages": [
@@ -169,8 +169,13 @@ class SessionManager:
         # Set current session
         self.current_session = history_data
 
-    def create_session(self) -> Session:
+    def create_session(
+            self,
+            title: str = "New Conversation"
+    ) -> Session:
         """ Create a new conversation session
+        Args:
+            title (str): Title of the new conversation session.
         Returns:
             Session: The created conversation session.
         """
@@ -178,8 +183,8 @@ class SessionManager:
         time_now: str = datetime.now().isoformat(' ', timespec='seconds')
 
         session = Session(
-            title="New Conversation",
-            provider=Provider.DEFAULT,
+            title=title,
+            model="gemini_flash",
             created_at=time_now,
             updated_at=time_now,
             messages=[]

@@ -1,0 +1,15 @@
+{
+    "models": {
+        "gemini_pro": "gemini/gemini-3-pro-preview",
+        "gemini_flash": "gemini/gemini-3-flash-preview",
+        "claude_haiku": "claude-haiku-4-5-20251001",
+        "claude_sonnet": "claude-sonnet-4-5-20250929",
+        "claude_opus": "claude-opus-4-5-20251101",
+        "gpt": "gpt-5.2",
+        "gpt_mini": "gpt-5-mini",
+        "gpt_codex": "gpt-5.1-codex-max",
+        "sonar": "perplexity/sonar",
+        "sonar-pro": "perplexity/sonar-pro",
+        "sonar-reasoning-pro": "perplexity/sonar-reasoning-pro"
+    }
+}
