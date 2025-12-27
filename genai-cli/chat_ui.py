@@ -122,7 +122,7 @@ class ChatUI:
     def print_session_history(self, messages: list[Message]):
         """ Print the conversation history to the console.
         Args:
-            messages (str): A list of Message objects representing the conversation history.
+            messages (list[Message]): A list of Message objects representing the conversation history.
         """
         self.console.print("\n[bold yellow]Loading conversation history...[/bold yellow]\n")
 

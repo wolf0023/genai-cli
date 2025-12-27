@@ -16,6 +16,38 @@ class Message:
     content: str
     timestamp: str
 
+    @classmethod
+    def create_obj(
+        cls,
+        role: str,
+        content: str,
+        timestamp:str
+    ) -> 'Message':
+        """ Create a Message instance from given parameters
+        Args:
+            role (str): Role of the message sender (e.g. "user", "assistant").
+            content (str): Content of the message.
+            timestamp (str): Timestamp of when the message was sent.
+        Returns:
+            Message: The created Message instance.
+        """
+        return cls(
+            role=Role(role),
+            content=content,
+            timestamp=timestamp
+        )
+
+    def to_dict(self) -> dict[str, str]:
+        """ Convert the message to a dictionary format
+        Returns:
+            dict[str, str]: Dictionary format of the message including timestamp.
+        """
+        return {
+            "role": self.role.value,
+            "content": self.content,
+            "timestamp": self.timestamp
+        }
+
 @dataclass
 class Session:
     """ Conversation session metadata and messages
@@ -34,6 +66,39 @@ class Session:
     updated_at: str
     messages: list[Message]
     filename: str|None = None
+
+    @classmethod
+    def create_obj(
+        cls,
+        title: str,
+        provider: str,
+        created_at: str,
+        updated_at: str,
+        messages: list[dict[str, str]],
+        filename: str|None = None
+    ) -> 'Session':
+        """ Create a Session instance from given parameters
+        Args:
+            title (str): Title of the conversation.
+            provider (str): Provider of the AI model.
+            provider (str): Creation timestamp of the conversation.
+            updated_at (str): Last updated timestamp of the conversation.
+            messages (list[dict[str, str]]): List of messages in the conversation.
+            filename (str|None): Optional filename that is associated with the session.
+        Returns:
+            Session: The created Session instance.
+        """
+        # Create message objects
+        message_objects = [Message.create_obj(**msg) for msg in messages]
+
+        return cls(
+            title=title,
+            provider=Provider(provider),
+            created_at=created_at,
+            updated_at=updated_at,
+            messages=message_objects,
+            filename=filename
+        )
 
     def append_message(
             self,
@@ -80,11 +145,7 @@ class Session:
             "created_at": self.created_at,
             "updated_at": self.updated_at,
             "messages": [
-                {
-                    "role": message.role.value,
-                    "content": message.content,
-                    "timestamp": message.timestamp
-                }
+                message.to_dict()
                 for message in self.messages
             ]
         }
@@ -99,49 +160,14 @@ class SessionManager:
 
     def load_session(
         self,
-        title: str,
-        provider: str,
-        created_at: str,
-        messages: list[dict[str, str]],
-        filename: str|None = None
-    ) -> Session:
+        history_data: Session
+    ) -> None:
         """ Load conversation session
         Args:
-            title (str): Title of the conversation.
-            provider (str): Provider of the AI model.
-            created_at (str): Creation timestamp of the conversation.
-            messages (list[dict[str, str]]): List of messages in the conversation.
-            filename (str|None): Optional filename that is associated with the session.
-        Returns:
-            Session: The created conversation session.
+            history_data (Session): The conversation session data to load.
         """
-        # Transform provider string to Provider enum
-        provider_enum: Provider = Provider(provider)
-
-        # Transform messages to Message dataclass instances
-        transformed_messages: list[Message] = []
-        for msg in messages:
-            transformed_messages.append(
-                Message(
-                    role=Role(msg["role"]),
-                    content=msg["content"],
-                    timestamp=msg["timestamp"]
-                )
-            )
-
-        session = Session(
-            title=title,
-            provider=provider_enum,
-            created_at=created_at,
-            updated_at=created_at,
-            messages=transformed_messages,
-            filename=filename
-        )
-
         # Set current session
-        self.current_session = session
-
-        return session
+        self.current_session = history_data
 
     def create_session(self) -> Session:
         """ Create a new conversation session

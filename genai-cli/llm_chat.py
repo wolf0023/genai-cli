@@ -1,8 +1,10 @@
 from litellm import completion, ModelResponse, CustomStreamWrapper, Choices, StreamingChoices
 from datetime import datetime
 import dotenv
+from litellm.litellm_core_utils.prompt_templates.factory import return_assistant_continue_message
 
 from enums import Role
+from session import Message
 
 dotenv.load_dotenv()
 
@@ -29,29 +31,40 @@ def create_user_prompt(
     </user_prompt>
     """.strip()
 
+def get_sendable_format(
+    message: Message
+) -> dict[str, str]:
+    """ Convert a Message object to a sendable format for the LLM model.
+        Args:
+            message: The Message object to convert.
+        Returns:
+            A dictionary with 'role' and 'content' keys.
+    """
+    return {
+        "role": message.role.value,
+        "content": message.content
+    }
+
 def get_chat_response(
     model: str,
     system_prompt: str,
     user_prompt: str,
-    history: list[dict[str, str]],
+    history: list[Message]
 ):
     """ Get a chat response from the LLM model.
         Args:
             model: The LLM model to use.
             system_prompt: The system prompt to set the context.
             user_prompt: The user's prompt.
-            history: The chat history as a list of messages.
+            history: The conversation history as a list of Message objects.
         Returns:
             The LLM's response as a string.
     """
-    messages: list[dict[str, str]] = []
+    messages: list[dict[str, str]] = [get_sendable_format(msg) for msg in history]
 
     # Add the system prompt to the messages if provided
     if system_prompt:
-        messages.append({"role": Role.SYSTEM.value, "content": system_prompt})
-
-    # Add the chat history to the messages
-    messages.extend(history)
+        messages.insert(0, {"role": Role.SYSTEM.value, "content": system_prompt})
 
     # Add the user's prompt to the messages
     messages.append({"role": Role.USER.value, "content": user_prompt})

@@ -2,7 +2,7 @@ from datetime import datetime
 from litellm.exceptions import AuthenticationError, RateLimitError
 
 from llm_chat import get_chat_response, create_user_prompt
-from session import SessionManager, Session
+from session import SessionManager
 from history import HistoryStorage
 from enums import Role
 from chat_ui import ChatUI
@@ -36,8 +36,7 @@ class ChatApp:
 
             with self.ui.waiting_indicator():
                 # Get chat history
-                session_data: dict = self.session_manager.current_session.to_dict()
-                history = session_data["messages"]
+                history = self.session_manager.current_session.messages
 
                 # Get AI response
                 response = get_chat_response(
@@ -102,13 +101,7 @@ class ChatApp:
             history_data = self.history_storage.get_history(filename)
 
             # Load session into session manager
-            self.session_manager.load_session(
-                title=history_data["title"],
-                provider=history_data["provider"],
-                created_at=history_data["created_at"],
-                messages=history_data["messages"],
-                filename=filename
-            )
+            self.session_manager.load_session(history_data)
 
             # Print existing conversation history
             self.ui.print_session_history(self.session_manager.current_session.messages)
@@ -121,8 +114,8 @@ class ChatApp:
             continue_chat = self.main_loop()
 
         # Save conversation history on exit
-        session_data = self.session_manager.current_session.to_dict()
-        self.history_storage.save_history(session_data, self.session_manager.current_session.filename)
+        session_data = self.session_manager.current_session
+        self.history_storage.save_history(session_data)
         self.ui.print_exit_message()
 
 if __name__ == "__main__":

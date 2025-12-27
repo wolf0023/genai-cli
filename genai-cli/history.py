@@ -2,6 +2,8 @@ import os
 import json
 from datetime import datetime
 
+from session import Session
+
 class HistoryStorage:
     """ Load and save conversation history to local storage.
     Attributes:
@@ -95,14 +97,14 @@ class HistoryStorage:
 
         return titles
 
-    def get_history(self, filename: str) -> dict[str, str|list[dict[str, str]]]:
+    def get_history(self, filename: str) -> Session:
         """ Load conversation history from storage.
         Args:
             filename (str): The name of the history file to load.
         Returns:
-            dict[str, str|list[dict[str, str]]]: The loaded conversation history.
+            Session: The loaded conversation history data.
         """
-        history_data: dict[str, str|list[dict[str, str]]] = {}
+        history_data: dict = {}
 
         if not self._check_valid_file(filename):
             raise Exception(f"Invalid history file: {filename}")
@@ -111,13 +113,11 @@ class HistoryStorage:
         with open(history_path, "r", encoding="utf-8") as f:
             history_data = json.load(f)
 
-        return history_data
+        return Session.create_obj(**history_data)
 
     def save_history(
         self,
-        history_data: dict[str, str|list[dict[str, str]]],
-        filename: str|None = None,
-        timestamp: datetime = datetime.now()
+        session_data: Session,
     ):
         """ Save conversation history to storage.
         Delete old file and create a new one.
@@ -127,24 +127,25 @@ class HistoryStorage:
             timestamp (datetime): The timestamp to use for the filename.
         """
         # Create as new file
-        timestamp_str = timestamp.strftime("%Y%m%d%H%M%S")
+        timestamp = datetime.fromisoformat(session_data.created_at)
+        timestamp_str = timestamp.strftime("%Y%m%d_%H%M%S")
         new_filename = f"history_{timestamp_str}.json"
         new_history_path = os.path.join(self.history_path, new_filename)
 
         with open(new_history_path, "w", encoding="utf-8") as f:
-            json.dump(history_data, f, ensure_ascii=False, indent=4)
+            json.dump(session_data.to_dict(), f, ensure_ascii=False, indent=4)
 
         # If num is None, just save as new file
-        if filename is None:
+        if session_data.filename is None:
             self._load_history_files()
             return
 
         # Check file validity
-        if not self._check_valid_file(filename):
-            raise Exception(f"History file not found: {filename}")
+        if not self._check_valid_file(session_data.filename):
+            raise Exception(f"History file not found: {session_data.filename}")
 
         # Delete old file
-        history_path = os.path.join(self.history_path, filename)
+        history_path = os.path.join(self.history_path, session_data.filename)
         os.remove(history_path)
 
         # Reload history files
