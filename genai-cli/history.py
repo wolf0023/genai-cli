@@ -3,18 +3,15 @@ import json
 from datetime import datetime
 
 from session import Session
+from const import HISTORY_DIR
 
 class HistoryStorage:
     """ Load and save conversation history to local storage.
     Attributes:
         history_path (str): The path to store conversation history files.
-        history_files (list[str]): List of history file names.
     """
-    def __init__(
-        self,
-        history_path: str = "~/.local/share/genai-cli"
-    ):
-        self.history_path = os.path.expanduser(history_path)
+    def __init__(self):
+        self.history_path = os.path.expanduser(HISTORY_DIR)
         self.history_files: list[str] = []
 
         os.makedirs(self.history_path, exist_ok=True)
