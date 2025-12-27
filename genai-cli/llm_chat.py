@@ -1,7 +1,6 @@
 from litellm import completion, ModelResponse, CustomStreamWrapper, Choices, StreamingChoices
 from datetime import datetime
 import dotenv
-from litellm.litellm_core_utils.prompt_templates.factory import return_assistant_continue_message
 
 from enums import Role
 from session import Message
