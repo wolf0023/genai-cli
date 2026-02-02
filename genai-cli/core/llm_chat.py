@@ -3,7 +3,7 @@ from datetime import datetime
 import dotenv
 
 from enums import Role
-from session import Message
+from core.session import Message
 
 dotenv.load_dotenv()
 

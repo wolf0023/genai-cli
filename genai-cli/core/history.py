@@ -2,7 +2,7 @@ import os
 import json
 from datetime import datetime
 
-from session import Session
+from core.session import Session
 from const import HISTORY_DIR
 
 class HistoryStorage:

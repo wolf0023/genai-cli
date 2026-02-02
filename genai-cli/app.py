@@ -1,11 +1,11 @@
 from datetime import datetime
 from litellm.exceptions import AuthenticationError, RateLimitError
 
-from llm_chat import get_chat_response, create_user_prompt
-from session import SessionManager
-from history import HistoryStorage
+from core.llm_chat import get_chat_response, create_user_prompt
+from core.session import SessionManager
+from core.history import HistoryStorage
 from enums import Role
-from chat_ui import ChatUI
+from ui.chat_ui import ChatUI
 from config.model import ModelConfig
 
 class ChatApp:

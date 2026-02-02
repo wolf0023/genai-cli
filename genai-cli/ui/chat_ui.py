@@ -4,7 +4,7 @@ from rich.status import Status
 from prompt_toolkit import PromptSession
 from prompt_toolkit.key_binding.vi_state import InputMode
 
-from session import Message
+from core.session import Message
 from enums import Role
 
 class ChatUI:
