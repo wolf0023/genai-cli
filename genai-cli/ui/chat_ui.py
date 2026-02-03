@@ -17,11 +17,11 @@ class ChatUI:
         self.console = Console()
         self.prompt_session = PromptSession()
 
-    def status_line_text(self, mode: InputMode) -> str:
+    def status_line_text(self) -> str:
         """ Get the status line for the chat UI.
-        Args:
-            mode (InputMode): The current input mode.
         """
+        mode = self.prompt_session.app.vi_state.input_mode
+
         mode_map = {
             InputMode.INSERT: "INSERT",
             InputMode.INSERT_MULTIPLE: "INSERT MULTIPLE",
@@ -43,9 +43,7 @@ class ChatUI:
                 ">>> ",
                 vi_mode=True,
                 multiline=True,
-                bottom_toolbar=self.status_line_text(
-                    self.prompt_session.app.vi_state.input_mode
-                ),
+                bottom_toolbar=self.status_line_text,
                 prompt_continuation="... "
             ).strip()
 
