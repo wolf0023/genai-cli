@@ -1,15 +1,32 @@
 {
     "models": {
-        "gemini_pro": "gemini/gemini-3-pro-preview",
-        "gemini_flash": "gemini/gemini-3-flash-preview",
-        "claude_haiku": "claude-haiku-4-5-20251001",
-        "claude_sonnet": "claude-sonnet-4-5-20250929",
-        "claude_opus": "claude-opus-4-5-20251101",
-        "gpt": "gpt-5.2",
-        "gpt_mini": "gpt-5-mini",
-        "gpt_codex": "gpt-5.1-codex-max",
-        "sonar": "perplexity/sonar",
-        "sonar-pro": "perplexity/sonar-pro",
-        "sonar-reasoning-pro": "perplexity/sonar-reasoning-pro"
+        "gemini_pro": {
+            "model_id": "gemini/gemini-3-pro-preview",
+            "thinking": true
+        },
+        "gemini_flash": {
+            "model_id": "gemini/gemini-3-flash-preview",
+            "thinking": true
+        },
+        "claude_haiku": {
+            "model_id": "claude-haiku-4-5-20251001",
+            "thinking": true
+        },
+        "claude_sonnet": {
+            "model_id": "claude-sonnet-4-5-20250929",
+            "thinking": true
+        },
+        "claude_opus": {
+            "model_id": "claude-opus-4-5-20251101",
+            "thinking": false
+        },
+        "gpt": {
+            "model_id": "gpt-5.2",
+            "thinking": false
+        },
+        "gpt_mini": {
+            "model_id": "gpt-5-mini",
+            "thinking": false
+        }
     }
 }

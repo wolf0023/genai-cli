@@ -48,7 +48,8 @@ def get_chat_response(
     model: str,
     system_prompt: str,
     user_prompt: str,
-    history: list[Message]
+    history: list[Message],
+    thinking: bool = False
 ):
     """ Get a chat response from the LLM model.
         Args:
@@ -56,6 +57,7 @@ def get_chat_response(
             system_prompt: The system prompt to set the context.
             user_prompt: The user's prompt.
             history: The conversation history as a list of Message objects.
+            thinking: Whether to use thinking mode (if applicable).
         Returns:
             The LLM's response as a string.
     """
@@ -72,6 +74,7 @@ def get_chat_response(
     response: ModelResponse|CustomStreamWrapper = completion(
         model=model, 
         messages=messages,
+        reasoning_effort="medium" if thinking else None
     )
 
     # Avoid 'Attribute "choices" is unknown'

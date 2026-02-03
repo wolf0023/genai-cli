@@ -11,13 +11,16 @@ class Model:
     Attributes:
         model_name (str): Name of the model.
         model_id (str): Identifier of the model.
+        thinking (bool): Whether use thinking mode. (if applicable)
     """
     model_name: str
     model_id: str
+    thinking: bool = False
 
 class ModelConfig:
     """ Load models configuration.
     Attributes:
+        model_path (str): The path to the models configuration directory.
         models_file (str): The path to the models configuration file.
         default_file (str): The path to the default models configuration file.
         models (list[Model]): List of loaded model configurations.
@@ -56,10 +59,11 @@ class ModelConfig:
         # Parse models data
         self.models = [
             Model(
-                model_name=model_name,
-                model_id=model_id
+                model_name=name,
+                model_id=model["model_id"],
+                thinking=model["thinking"]
             )
-            for model_name, model_id in models_data.get("models", []).items()
+            for name, model in models_data["models"].items()
         ]
 
     def get_model_names(self) -> list[str]:

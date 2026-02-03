@@ -53,6 +53,7 @@ class ChatApp:
                         current_time=user_timestamp
                     ),
                     history=history,
+                    thinking=model.thinking
                 )
 
             self.ui.print_ai_message(response)
