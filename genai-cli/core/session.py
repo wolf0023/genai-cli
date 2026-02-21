@@ -171,20 +171,26 @@ class SessionManager:
 
     def create_session(
             self,
+            model: str,
             title: str = "New Conversation"
     ) -> Session:
         """ Create a new conversation session
         Args:
+            model (str): The AI model to use for the conversation session.
             title (str): Title of the new conversation session.
         Returns:
             Session: The created conversation session.
         """
+        # If model is empty, raise an error
+        if not model:
+            raise ValueError("Model name cannot be empty.")
+
         # Get current
         time_now: str = datetime.now().isoformat(' ', timespec='seconds')
 
         session = Session(
             title=title,
-            model="gemini_flash",
+            model=model,
             created_at=time_now,
             updated_at=time_now,
             messages=[]

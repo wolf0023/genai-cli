@@ -7,19 +7,23 @@ from core.history import HistoryStorage
 from enums import Role
 from ui.chat_ui import ChatUI
 from config.model import ModelConfig
+from config.config import ConfigManager
 
 class ChatApp:
     """ Chat application class for managing the chat UI.
     Attributes:
-        console (Console): Rich console for output.
-        prompt_session (PromptSession): Prompt session for user input.
         session_manager (SessionManager): Manager for conversation sessions.
+        history_storage (HistoryStorage): Storage for conversation history.
+        ui (ChatUI): User interface for chat interactions.
+        model_config (ModelConfig): Configuration for available models.
+        main_config (ConfigManager): Main configuration manager for app settings.
     """
     def __init__(self):
         self.session_manager = SessionManager()
         self.history_storage = HistoryStorage()
         self.ui = ChatUI()
         self.model_config = ModelConfig()
+        self.main_config = ConfigManager(self.ui)
 
         # Load available models from configuration
         self.model_config.load_models()
@@ -44,10 +48,14 @@ class ChatApp:
                 history = self.session_manager.current_session.messages
                 model = self.model_config.get_model(self.session_manager.current_session.model)
 
+                # Check if model configuration is found
+                if model is None:
+                    raise Exception(f"Model '{self.session_manager.current_session.model}' not found.")
+
                 # Get AI response
                 response = get_chat_response(
                     model=model.model_id,
-                    system_prompt="You are a helpful AI assistant.",
+                    system_prompt=self.main_config.config.system_prompt,
                     user_prompt=create_user_prompt(
                         user_input, 
                         current_time=user_timestamp
@@ -114,7 +122,8 @@ class ChatApp:
             self.ui.print_session_history(self.session_manager.current_session.messages)
         else:
             # Create a new session if none selected
-            self.session_manager.create_session()
+            default_model = self.main_config.config.default_model
+            self.session_manager.create_session(default_model)
 
         continue_chat = True
         while continue_chat:
