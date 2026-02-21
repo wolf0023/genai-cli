@@ -9,7 +9,7 @@ dotenv.load_dotenv()
 
 def create_user_prompt(
     user_prompt: str, 
-    current_time: datetime = datetime.now()
+    current_time: datetime | None = None
 ) -> str:
     """ Create an user prompt for the LLM model.
     Args:
@@ -18,6 +18,10 @@ def create_user_prompt(
     Returns:
         The formatted user prompt as a string.
     """
+    # If current_time is not provided, use the current timestamp
+    if current_time is None:
+        current_time = datetime.now()
+
     time_str: str = current_time.isoformat(sep=' ', timespec='seconds')
     time_zone: str = current_time.astimezone().tzname() or "UTC"
 
@@ -83,7 +87,7 @@ def get_chat_response(
 
     choice: Choices|StreamingChoices = response.choices[0]
 
-    # Avoice 'Attribute "message" is unknown'
+    # Avoid 'Attribute "message" is unknown'
     if isinstance(choice, StreamingChoices):
         return "Something went wrong. Please try again."
 
