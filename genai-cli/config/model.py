@@ -52,7 +52,7 @@ class ModelConfig:
 
         Raises:
             ValueError: If the loaded models configuration is empty or invalid, a ValueError will be raised.
-            ValidateionError: If the loaded models configuration does not conform to the schema, a ValidationError will be raised.
+            ValidationError: If the loaded models configuration does not conform to the schema, a ValidationError will be raised.
         """
         # If models file does not exist, copy the default one
         if not os.path.isfile(self.models_file):
