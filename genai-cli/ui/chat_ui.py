@@ -6,6 +6,7 @@ from prompt_toolkit.key_binding.vi_state import InputMode
 
 from core.session import Message
 from enums import Role
+from core.history import History
 
 class ChatUI:
     """ Chat UI class for rendering messages to the console.
@@ -51,20 +52,20 @@ class ChatUI:
             if user_input:
                 return user_input
 
-    def select_session(self, history_titles: list[str]):
+    def select_session(self, histories: list[History]):
         """ Select or create a conversation session.
         Args:
-            history_titles (list[str]): List of conversation session titles.
+            history_titles (list[History]): List of conversation session titles.
         Returns:
             int|None: The index of the selected session, or None if creating a new session.
         """
         # If no history, skip selection
-        if not history_titles:
+        if not histories:
             return None
 
         self.print_message("[bold green]Select a conversation session:[/bold green]")
-        for idx, title in enumerate(history_titles):
-            self.print_message(f"[{idx}] {title}")
+        for idx, history in enumerate(histories):
+            self.print_message(f"[{idx}] {history.title}")
 
         # Prompt user to select session
         choice = -1
@@ -77,7 +78,7 @@ class ChatUI:
 
             # Load selected session
             # When choice is -1, create new session
-            if -1 <= choice < len(history_titles):
+            if -1 <= choice < len(histories):
                 break
 
             self.print_error("Invalid choice.")

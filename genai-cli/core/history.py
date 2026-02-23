@@ -1,41 +1,60 @@
+import logging
 import os
 import json
 from datetime import datetime
+from dataclasses import dataclass
 
 from core.session import Session
 from const import HISTORY_DIR
 
+@dataclass
+class History:
+    """ Conversation history metadata and messages
+    Attributes:
+        title (str): Title of the conversation.
+        filename (str): The filename associated with the conversation history.
+    """
+    title: str
+    filename: str
+
 class HistoryStorage:
     """ Load and save conversation history to local storage.
     Attributes:
+        logger (logging.Logger): Logger for application events and errors.
         history_path (str): The path to store conversation history files.
+        histories (list[History]): List of conversation history metadata.
     """
-    def __init__(self):
-        self.history_path = os.path.expanduser(HISTORY_DIR)
-        self.history_files: list[str] = []
+    def __init__(self, logger):
+        self._logger: logging.Logger = logger
 
-        os.makedirs(self.history_path, exist_ok=True)
+        self._history_path: str = os.path.expanduser(HISTORY_DIR)
+        self.histories: list[History] = []
+
+        os.makedirs(self._history_path, exist_ok=True)
         self._load_history_files()
 
     def _load_history_files(self):
         """ Load the list of history files from storage.
         """
-        self.history_files = [
-            file for file in os.listdir(self.history_path)
-            if os.path.isfile(os.path.join(self.history_path, file)) and file.endswith(".json")
-        ]
+        # Clear existing history metadata list before loading
+        self.histories.clear()
 
-    def get_filename(self, num: int) -> str:
-        """ Get the filename of a history file by index.
-        Args:
-            num (int): The index of the history file.
-        Returns:
-            str: The filename of the history file.
-        """
-        if num < 0 or num >= len(self.history_files):
-            raise IndexError("History file index out of range.")
+        # Iterate through files in the history directory and load metadata for valid history files
+        for filename in sorted(os.listdir(self._history_path), reverse=True):
+            # Skip files that are not valid history files
+            if not self._check_valid_file(filename):
+                continue
 
-        return self.history_files[num]
+            # Read the title from the history file
+            try:
+                with open(os.path.join(self._history_path, filename), "r", encoding="utf-8") as f:
+                    history_data = json.load(f)
+            except Exception as e:
+                self._logger.error(f"Error loading history file {filename}: {str(e)}")
+                continue
+
+            title = history_data.get("title", "Untitled Conversation")
+            self.histories.append(History(title=title, filename=filename))
 
     def _check_valid_file(self, filename: str) -> bool:
         """ Check if a history file is valid.
@@ -44,7 +63,7 @@ class HistoryStorage:
         Returns:
             bool: True if the file is valid, False otherwise.
         """
-        history_path = os.path.join(self.history_path, filename)
+        history_path = os.path.join(self._history_path, filename)
 
         # Validate file existence and format
         if not os.path.isfile(history_path):
@@ -56,95 +75,82 @@ class HistoryStorage:
 
         return True
 
-    def _get_title(self, num: int ) -> str:
-        """ Get the titles of all stored conversation histories.
+    def _create_history(self, session_data: Session):
+        """ Create a new conversation history file in storage.
+
         Args:
-            num (int): The index of the history file to get the title from.
-        Returns:
-            str: The title of the conversation history.
+            session_data (Session): The conversation history data to save.
+
+        Raises:
+            Exception: If there is an error creating the history file.
         """
-        # Check index validity
-        if num < 0 or num >= len(self.history_files):
-            raise IndexError("History file index out of range.")
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"history_{timestamp}.json"
+        history_path = os.path.join(self._history_path, filename)
 
-        filename = self.get_filename(num)
-        history_path = os.path.join(self.history_path, filename)
+        try:
+            with open(history_path, "w", encoding="utf-8") as f:
+                json.dump(session_data.to_dict(), f, ensure_ascii=False, indent=4)
+        except Exception as e:
+            self._logger.error(f"Error creating history file {filename}: {str(e)}")
+            raise Exception(f"Failed to create history file: {str(e)}")
 
-        if not self._check_valid_file(filename):
-            raise Exception(f"Invalid history file: {filename}")
-
-        # Load title from history file
-        with open(history_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-            return data.get("title")
-
-    def get_history_titles(self) -> list[str]:
-        """ Get the titles of all stored conversation histories.
-        Returns:
-            list[str]: List of conversation history titles.
-        """
-        titles: list[str] = []
-        for index, _ in enumerate(self.history_files):
-            try:
-                title = self._get_title(index)
-                titles.append(title)
-            except (Exception):
-                # Skip files that cannot be read or parsed
-                continue
-
-        return titles
+        # Update history files list after creating a new history file
+        self._load_history_files()
 
     def get_history(self, filename: str) -> Session:
         """ Load conversation history from storage.
+
         Args:
             filename (str): The name of the history file to load.
+
         Returns:
             Session: The loaded conversation history data.
+
+        Raises:
+            Exception: If the history file is invalid or cannot be loaded.
         """
         history_data: dict = {}
 
         if not self._check_valid_file(filename):
             raise Exception(f"Invalid history file: {filename}")
 
-        history_path = os.path.join(self.history_path, filename)
-        with open(history_path, "r", encoding="utf-8") as f:
-            history_data = json.load(f)
+        history_path = os.path.join(self._history_path, filename)
 
-        return Session.create_obj(**history_data)
+        try:
+            with open(history_path, "r", encoding="utf-8") as f:
+                history_data = json.load(f)
+        except Exception as e:
+            self._logger.error(f"Error loading history file {filename}: {str(e)}")
+            raise Exception(f"Failed to load history file: {str(e)}")
 
-    def save_history(
-        self,
-        session_data: Session,
-    ):
+        return Session.create_obj(**history_data, filename=filename)
+
+    def save_history(self, session_data: Session):
         """ Save conversation history to storage.
-        Delete old file and create a new one.
+        Overwrite the history file if filename already exists, otherwise create a new file with a timestamp.
+
         Args:
             history_data (dict[str, str|list[dict[str, str]]]): The conversation history data to save.
             filename (str|None): The name of the history file to replace. If None, a new file is created.
-            timestamp (datetime): The timestamp to use for the filename.
+
+        Raises:
+            Exception: If there is an error saving the history file.
         """
-        # Create as new file
-        timestamp = datetime.fromisoformat(session_data.created_at)
-        timestamp_str = timestamp.strftime("%Y%m%d_%H%M%S")
-        new_filename = f"history_{timestamp_str}.json"
-        new_history_path = os.path.join(self.history_path, new_filename)
+        try: 
+            # If the session is new, create a new history file with a timestamp
+            if session_data.filename is None or not self._check_valid_file(session_data.filename):
+                self._create_history(session_data)
+                return
 
-        with open(new_history_path, "w", encoding="utf-8") as f:
-            json.dump(session_data.to_dict(), f, ensure_ascii=False, indent=4)
+            # If the session has an existing filename, overwrite the existing history file
+            history_path = os.path.join(self._history_path, session_data.filename)
 
-        # If num is None, just save as new file
-        if session_data.filename is None:
-            self._load_history_files()
-            return
+            with open(history_path, "w", encoding="utf-8") as f:
+                json.dump(session_data.to_dict(), f, ensure_ascii=False, indent=4)
+        except Exception as e:
+            self._logger.error(f"Error saving history file {session_data.filename}: {str(e)}")
+            raise Exception(f"Failed to save history file: {str(e)}")
 
-        # Check file validity
-        if not self._check_valid_file(session_data.filename):
-            raise Exception(f"History file not found: {session_data.filename}")
-
-        # Delete old file
-        history_path = os.path.join(self.history_path, session_data.filename)
-        os.remove(history_path)
-
-        # Reload history files
+        # Update history files list after saving the history file
         self._load_history_files()
-

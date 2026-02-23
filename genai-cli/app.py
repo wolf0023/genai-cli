@@ -25,7 +25,7 @@ class ChatApp:
     def __init__(self):
         self.logger = Logger().logger
         self.session_manager = SessionManager()
-        self.history_storage = HistoryStorage()
+        self.history_storage = HistoryStorage(self.logger)
 
         self.ui = ChatUI()
 
@@ -106,7 +106,6 @@ class ChatApp:
             return True
 
         except Exception as e:
-            # When an error occurs, print it and continue
             self.ui.print_error(f"Unexpected error occurred. Please check the logs for more details.")
             self.logger.error(f"Unexpected error during main loop: {str(e)}", stack_info=True)
             return False
@@ -118,7 +117,7 @@ class ChatApp:
 
         try: 
             # Let user select a session from history
-            choice = self.ui.select_session(self.history_storage.get_history_titles())
+            choice = self.ui.select_session(self.history_storage.histories)
         except (KeyboardInterrupt, EOFError):
             # Exit on Ctrl+C or Ctrl+D
             self.ui.print_exit_message()
@@ -127,7 +126,7 @@ class ChatApp:
         # Load selected session
         if choice is not None:
             # Get history data
-            filename = self.history_storage.get_filename(choice)
+            filename = self.history_storage.histories[choice].filename
             history_data = self.history_storage.get_history(filename)
 
             # Load session into session manager
@@ -146,9 +145,11 @@ class ChatApp:
 
         # Save conversation history on exit
         session_data = self.session_manager.current_session
-        self.history_storage.save_history(session_data)
+        if session_data is not None:
+            self.history_storage.save_history(session_data)
+            self.logger.info("Chat session ended and history saved.")
+
         self.ui.print_exit_message()
-        self.logger.info("Chat session ended and history saved.")
 
 if __name__ == "__main__":
     chat_app = ChatApp()
