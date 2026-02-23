@@ -6,6 +6,7 @@ import logging
 
 from ui.chat_ui import ChatUI
 from const import CONFIG_DIR, CONFIG_FILE
+from config.config_schema import SCHEMA
 
 @dataclass
 class Config:
@@ -72,7 +73,7 @@ class ConfigManager:
         Raises:
             Exception: If there is an error loading the config file, an exception will be raised.
         """
-        # if config file doew not exitst, copy the default one
+        # if config file does not exist, copy the default one
         if not os.path.isfile(self.config_file):
             self._create_config_file()
 
@@ -81,12 +82,8 @@ class ConfigManager:
             with open(self.config_file, 'r') as f:
                 configs = json.load(f)
 
-            # Load the config schema
-            with open(self.config_schema, 'r') as f:
-                schema = json.load(f)
-
             # Validate the loaded config
-            validate(instance=configs, schema=schema)
+            validate(instance=configs, schema=SCHEMA)
 
             # Overwrite Config object from loaded settings
             self.config = Config(**configs)

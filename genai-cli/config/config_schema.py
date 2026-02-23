@@ -1,4 +1,4 @@
-{
+SCHEMA = {
     "type": "object",
     "description": "Configuration schema for the GenAI CLI tool.",
     "properties": {
