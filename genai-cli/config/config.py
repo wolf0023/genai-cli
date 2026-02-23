@@ -2,6 +2,7 @@ from dataclasses import dataclass, asdict
 import os
 import json
 from jsonschema import validate, ValidationError
+import logging
 
 from ui.chat_ui import ChatUI
 from const import CONFIG_DIR, CONFIG_FILE
@@ -31,17 +32,18 @@ class ConfigManager:
         config_path (str): The path to the configuration directory.
         config_file (str): The path to the configuration file.
         config_schema (str): The path to the configuration schema file.
-        chat_ui (ChatUI): The chat UI for displaying messages and errors.
+        logger (logging.Logger): Logger instance for logging messages.
 
     Raises:
         Exception: If there is an error loading the config file, an exception will be raised.
     """
-    def __init__(self, chat_ui: ChatUI):
+    def __init__(self, logger: logging.Logger, ui: ChatUI):
         self.config: Config = Config()
         self.config_path: str = os.path.expanduser(CONFIG_DIR)
         self.config_file: str = os.path.join(self.config_path, CONFIG_FILE)
         self.config_schema: str = os.path.join(os.path.dirname(__file__), 'config_schema.json')
-        self.chat_ui: ChatUI = chat_ui
+        self.logger = logger
+        self.ui = ui
 
         os.makedirs(self.config_path, exist_ok=True)
         self._load_config()
@@ -61,7 +63,7 @@ class ConfigManager:
                 json.dump(default_config, f, indent=4)
 
         except Exception as e:
-            self.chat_ui.print_error(f"Failed to create config file: {e}")
+            self.logger.error(f"Failed to create config file: {e}")
             raise
 
     def _load_config(self):
@@ -90,9 +92,9 @@ class ConfigManager:
             self.config = Config(**configs)
 
         except ValidationError as e:
-            self.chat_ui.print_error(f"Config validation error: {e.message}")
-            self.chat_ui.print_message("Loading default configuration settings.")
+            self.logger.error(f"Config validation error: {e.message}")
+            self.ui.print_error("Loading default configuration settings.")
 
         except Exception as e:
-            self.chat_ui.print_error(f"Failed to load config file: {e}")
+            self.logger.error(f"Failed to load config file: {e}")
             raise
