@@ -10,6 +10,7 @@ from enums import Role
 from ui.chat_ui import ChatUI
 from config.model import ModelConfig
 from config.config import ConfigManager
+from const import TITLE_MAX_LENGTH
 
 class ChatApp:
     """ Chat application class for managing the chat UI.
@@ -50,9 +51,16 @@ class ChatApp:
             user_timestamp = datetime.now()
             self.logger.info("User input received.")
 
+            # Get current session history
+            history = self.session_manager.current_session.messages
+
+            # If session's title is empty, set it to the first user input
+            if len(history) == 0:
+                self.session_manager.current_session.title = user_input[:TITLE_MAX_LENGTH]
+                self.logger.info(f"Session title set to: {self.session_manager.current_session.title}")
+
             with self.ui.waiting_indicator():
-                # Get chat history
-                history = self.session_manager.current_session.messages
+                # Get model configuration for current session
                 model = self.model_config.get_model(self.session_manager.current_session.model)
 
                 # Check if model configuration is found
