@@ -1,95 +1,114 @@
 from litellm import completion, ModelResponse, CustomStreamWrapper, Choices, StreamingChoices
 from datetime import datetime
-import dotenv
 
 from enums import Role
 from core.session import Message
 
-dotenv.load_dotenv()
+class LLMChat:
+    """ A class to handle interactions with the LLM model for chat-based conversations. 
 
-def create_user_prompt(
-    user_prompt: str, 
-    current_time: datetime | None = None
-) -> str:
-    """ Create an user prompt for the LLM model.
-    Args:
-        user_prompt: The user's prompt.
-        current_time: The current timestamp.
-    Returns:
-        The formatted user prompt as a string.
+    Attributes:
+        logger: A logging instance to log messages and errors.
     """
-    # If current_time is not provided, use the current timestamp
-    if current_time is None:
-        current_time = datetime.now()
 
-    time_str: str = current_time.isoformat(sep=' ', timespec='seconds')
-    time_zone: str = current_time.astimezone().tzname() or "UTC"
+    def __init__(self, logger):
+        """ Initialize the LLMChat instance.
 
-    return f"""
-    <current_time>
-        {time_str} ({time_zone})
-    </current_time>
-    <user_prompt>
-        {user_prompt.strip()}
-    </user_prompt>
-    """.strip()
-
-def get_sendable_format(
-    message: Message
-) -> dict[str, str]:
-    """ Convert a Message object to a sendable format for the LLM model.
         Args:
-            message: The Message object to convert.
-        Returns:
-            A dictionary with 'role' and 'content' keys.
-    """
-    return {
-        "role": message.role.value,
-        "content": message.content
-    }
+            logger: A logging instance to log messages and errors.
+        """
+        self.logger = logger
 
-def get_chat_response(
-    model: str,
-    system_prompt: str,
-    user_prompt: str,
-    history: list[Message],
-    thinking: bool = False
-):
-    """ Get a chat response from the LLM model.
+    def create_user_prompt(
+        self,
+        user_prompt: str, 
+        current_time: datetime | None = None
+    ) -> str:
+        """ Create an user prompt for the LLM model.
         Args:
-            model: The LLM model to use.
-            system_prompt: The system prompt to set the context.
             user_prompt: The user's prompt.
-            history: The conversation history as a list of Message objects.
-            thinking: Whether to use thinking mode (if applicable).
+            current_time: The current timestamp.
         Returns:
-            The LLM's response as a string.
-    """
-    messages: list[dict[str, str]] = [get_sendable_format(msg) for msg in history]
+            The formatted user prompt as a string.
+        """
+        # If current_time is not provided, use the current timestamp
+        if current_time is None:
+            current_time = datetime.now()
 
-    # Add the system prompt to the messages if provided
-    if system_prompt:
-        messages.insert(0, {"role": Role.SYSTEM.value, "content": system_prompt})
+        time_str: str = current_time.isoformat(sep=' ', timespec='seconds')
+        time_zone: str = current_time.astimezone().tzname() or "UTC"
 
-    # Add the user's prompt to the messages
-    messages.append({"role": Role.USER.value, "content": user_prompt})
+        return f"""
+        <current_time>
+            {time_str} ({time_zone})
+        </current_time>
+        <user_prompt>
+            {user_prompt.strip()}
+        </user_prompt>
+        """.strip()
 
-    # Get the completion from the LLM model
-    response: ModelResponse|CustomStreamWrapper = completion(
-        model=model, 
-        messages=messages,
-        reasoning_effort="medium" if thinking else None
-    )
+    def get_sendable_format(
+        self,
+        message: Message
+    ) -> dict[str, str]:
+        """ Convert a Message object to a sendable format for the LLM model.
+            Args:
+                message: The Message object to convert.
+            Returns:
+                A dictionary with 'role' and 'content' keys.
+        """
+        return {
+            "role": message.role.value,
+            "content": message.content
+        }
 
-    # Avoid 'Attribute "choices" is unknown'
-    if isinstance(response, CustomStreamWrapper):
-        return "Something went wrong. Please try again."
+    def get_chat_response(
+        self,
+        model: str,
+        system_prompt: str,
+        user_prompt: str,
+        history: list[Message],
+        thinking: bool = False
+    ):
+        """ Get a chat response from the LLM model.
+            Args:
+                model: The LLM model to use.
+                system_prompt: The system prompt to set the context.
+                user_prompt: The user's prompt.
+                history: The conversation history as a list of Message objects.
+                thinking: Whether to use thinking mode (if applicable).
+            Returns:
+                The LLM's response as a string.
+        """
+        messages: list[dict[str, str]] = [self.get_sendable_format(msg) for msg in history]
 
-    choice: Choices|StreamingChoices = response.choices[0]
+        # Add the system prompt to the messages if provided
+        if system_prompt:
+            messages.insert(0, {"role": Role.SYSTEM.value, "content": system_prompt})
 
-    # Avoid 'Attribute "message" is unknown'
-    if isinstance(choice, StreamingChoices):
-        return "Something went wrong. Please try again."
+        # Add the user's prompt to the messages
+        messages.append({"role": Role.USER.value, "content": user_prompt})
 
-    return choice.message["content"]
+        # Get the completion from the LLM model
+        response: ModelResponse|CustomStreamWrapper = completion(
+            model=model, 
+            messages=messages,
+            reasoning_effort="medium" if thinking else None
+        )
+
+        # Avoid 'Attribute "choices" is unknown'
+        if isinstance(response, CustomStreamWrapper):
+            return "Something went wrong. Please try again."
+
+        choice: Choices|StreamingChoices = response.choices[0]
+
+        # Log token usage information if available
+        self.logger.info(f"Prompt tokens: {response.usage.get('prompt_tokens', 'N/A')}")
+        self.logger.info(f"Completion tokens: {response.usage.get('completion_tokens', 'N/A')}")
+
+        # Avoid 'Attribute "message" is unknown'
+        if isinstance(choice, StreamingChoices):
+            return "Something went wrong. Please try again."
+
+        return choice.message["content"]
 

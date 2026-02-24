@@ -1,15 +1,21 @@
 from datetime import datetime
-from rich.console import Console
 from litellm.exceptions import AuthenticationError, RateLimitError, BadRequestError
+import dotenv
 
-from core.llm_chat import get_chat_response, create_user_prompt
 from core.session import SessionManager
 from core.history import HistoryStorage
 from core.logger import Logger
+from core.llm_chat import LLMChat
 from enums import Role
 from ui.chat_ui import ChatUI
 from config.model import ModelConfig
 from config.config import ConfigManager
+
+# Load environment variables from the .env file
+# This is necessary to ensure that any required API keys or configurations are available.
+# Please check LiteLLM documantation for more details on required environment variables.
+dotenv.load_dotenv()
+
 from const import TITLE_MAX_LENGTH
 
 class ChatApp:
@@ -32,6 +38,8 @@ class ChatApp:
 
         self.model_config = ModelConfig()
         self.main_config = ConfigManager(self.logger, self.ui)
+
+        self.llm_chat = LLMChat(self.logger)
 
         # Load available models from configuration
         self.model_config.load_models()
@@ -69,10 +77,10 @@ class ChatApp:
 
                 # Get AI response
                 self.logger.info(f"Sending user input to model '{model.model_id}' for response.")
-                response = get_chat_response(
+                response = self.llm_chat.get_chat_response(
                     model=model.model_id,
                     system_prompt=self.main_config.config.system_prompt,
-                    user_prompt=create_user_prompt(
+                    user_prompt=self.llm_chat.create_user_prompt(
                         user_input, 
                         current_time=user_timestamp
                     ),
