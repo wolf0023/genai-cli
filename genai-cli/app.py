@@ -1,6 +1,6 @@
 from datetime import datetime
-from litellm.exceptions import AuthenticationError, RateLimitError
 from rich.console import Console
+from litellm.exceptions import AuthenticationError, RateLimitError, BadRequestError
 
 from core.llm_chat import get_chat_response, create_user_prompt
 from core.session import SessionManager
@@ -109,13 +109,21 @@ class ChatApp:
             return False
 
         except RateLimitError:
-            self.ui.print_message("Rate limit exceeded. Please try again later.")
+            self.ui.print_error("Rate limit exceeded. Please try again later.")
             self.logger.error("Error during sending request to model: Rate limit exceeded.")
+            return True
+
+        except BadRequestError as e:
+            model = self.model_config.get_model(self.session_manager.current_session.model)
+            model_id = model.model_id if model is not None else "Unknown Model"
+
+            self.ui.print_error(f"The model \"{model_id}\" is not available or the request was invalid.")
+            self.logger.error(f"Error during sending request to model: Bad request - {str(e)}")
             return True
 
         except Exception as e:
             self.ui.print_error(f"Unexpected error occurred. Please check the logs for more details.")
-            self.logger.error(f"Unexpected error during main loop: {str(e)}", stack_info=True)
+            self.logger.error(f"Unexpected error during main loop: {str(e)}", exc_info=True)
             return False
 
     def start_chat(self):
