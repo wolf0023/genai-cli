@@ -1,5 +1,6 @@
 import logging
 import os
+import warnings
 from datetime import datetime
 
 from const import LOG_FORMAT, LOG_DIR, LOG_TIME_FORMAT
@@ -20,10 +21,15 @@ class Logger:
         self.log_file: str = os.path.join(self.log_dir, f"genai-cli_{self.init_time}.log")
         os.makedirs(self.log_dir, exist_ok=True)
 
+        # Set up logger
         self.logger = logging.getLogger("genai-cli")
         self.logger.setLevel(logging_level)
+        self.logger.propagate = False
 
-        # Set up file handler for logging
+        # Add file handler to logger
         file_handler = logging.FileHandler(self.log_file)
         file_handler.setFormatter(logging.Formatter(LOG_FORMAT))
         self.logger.addHandler(file_handler)
+
+        # Suppress warnings
+        warnings.filterwarnings("ignore")
