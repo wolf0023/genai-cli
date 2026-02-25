@@ -64,7 +64,7 @@ class ChatApp:
 
             # If session's title is empty, set it to the first user input
             if len(history) == 0:
-                self.session_manager.current_session.title = user_input[:TITLE_MAX_LENGTH]
+                self.session_manager.current_session.title = ''.join(user_input.split())[:TITLE_MAX_LENGTH]
                 self.logger.info(f"Session title set to: {self.session_manager.current_session.title}")
 
             with self.ui.waiting_indicator():
