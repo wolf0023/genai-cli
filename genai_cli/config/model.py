@@ -4,8 +4,8 @@ import json
 import shutil
 from jsonschema import validate, ValidationError
 
-from const import CONFIG_DIR, MODELS_FILE
-from config.model_schema import SCHEMA
+from genai_cli.const import CONFIG_DIR, MODELS_FILE
+from genai_cli.config.model_schema import SCHEMA
 
 @dataclass
 class Model:

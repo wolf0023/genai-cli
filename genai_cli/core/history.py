@@ -4,8 +4,8 @@ import json
 from datetime import datetime
 from dataclasses import dataclass
 
-from core.session import Session
-from const import HISTORY_DIR
+from genai_cli.core.session import Session
+from genai_cli.const import HISTORY_DIR
 
 @dataclass
 class History:

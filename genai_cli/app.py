@@ -2,14 +2,14 @@ from datetime import datetime
 from litellm.exceptions import AuthenticationError, RateLimitError, BadRequestError
 import dotenv
 
-from core.session import SessionManager
-from core.history import HistoryStorage
-from core.logger import Logger
-from core.llm_chat import LLMChat
-from enums import Role
-from ui.chat_ui import ChatUI
-from config.model import ModelConfig
-from config.config import ConfigManager
+from genai_cli.core.session import SessionManager
+from genai_cli.core.history import HistoryStorage
+from genai_cli.core.logger import Logger
+from genai_cli.core.llm_chat import LLMChat
+from genai_cli.enums import Role
+from genai_cli.ui.chat_ui import ChatUI
+from genai_cli.config.model import ModelConfig
+from genai_cli.config.config import ConfigManager
 
 # Load environment variables from the .env file
 # This is necessary to ensure that any required API keys or configurations are available.

@@ -4,9 +4,9 @@ from rich.status import Status
 from prompt_toolkit import PromptSession
 from prompt_toolkit.key_binding.vi_state import InputMode
 
-from core.session import Message
-from enums import Role
-from core.history import History
+from genai_cli.core.session import Message
+from genai_cli.enums import Role
+from genai_cli.core.history import History
 
 class ChatUI:
     """ Chat UI class for rendering messages to the console.

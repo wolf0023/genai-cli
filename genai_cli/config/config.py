@@ -4,9 +4,9 @@ import json
 from jsonschema import validate, ValidationError
 import logging
 
-from ui.chat_ui import ChatUI
-from const import CONFIG_DIR, CONFIG_FILE
-from config.config_schema import SCHEMA
+from genai_cli.ui.chat_ui import ChatUI
+from genai_cli.const import CONFIG_DIR, CONFIG_FILE
+from genai_cli.config.config_schema import SCHEMA
 
 @dataclass
 class Config:

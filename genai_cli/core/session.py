@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 
-from enums import Role
+from genai_cli.enums import Role
 
 @dataclass
 class Message:

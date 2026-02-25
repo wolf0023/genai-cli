@@ -1,8 +1,8 @@
 from litellm import completion, ModelResponse, CustomStreamWrapper, Choices, StreamingChoices
 from datetime import datetime
 
-from enums import Role
-from core.session import Message
+from genai_cli.enums import Role
+from genai_cli.core.session import Message
 
 class LLMChat:
     """ A class to handle interactions with the LLM model for chat-based conversations. 

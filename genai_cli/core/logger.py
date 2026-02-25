@@ -3,7 +3,7 @@ import os
 import warnings
 from datetime import datetime
 
-from const import LOG_FORMAT, LOG_DIR, LOG_TIME_FORMAT
+from genai_cli.const import LOG_FORMAT, LOG_DIR, LOG_TIME_FORMAT
 
 class Logger:
     """ Logger class for genai-cli.
