@@ -38,16 +38,14 @@ class ConfigManager:
     Raises:
         Exception: If there is an error loading the config file, an exception will be raised.
     """
-    def __init__(self, logger: logging.Logger, ui: ChatUI):
+    def __init__(self, logger: logging.Logger):
         self.config: Config = Config()
         self.config_path: str = os.path.expanduser(CONFIG_DIR)
         self.config_file: str = os.path.join(self.config_path, CONFIG_FILE)
         self.config_schema: str = os.path.join(os.path.dirname(__file__), 'config_schema.json')
         self.logger = logger
-        self.ui = ui
 
         os.makedirs(self.config_path, exist_ok=True)
-        self._load_config()
 
     def _create_config_file(self):
         """ Create a new configuration file with default settings.
@@ -67,10 +65,11 @@ class ConfigManager:
             self.logger.error(f"Failed to create config file: {e}")
             raise
 
-    def _load_config(self):
+    def load_config(self):
         """ Load configuration settings from file.
 
         Raises:
+            ValidationError: If the loaded config does not conform to the schema, a ValidationError will be raised.
             Exception: If there is an error loading the config file, an exception will be raised.
         """
         # if config file does not exist, copy the default one
@@ -90,7 +89,7 @@ class ConfigManager:
 
         except ValidationError as e:
             self.logger.error(f"Config validation error: {e.message}")
-            self.ui.print_error("Loading default configuration settings.")
+            raise
 
         except Exception as e:
             self.logger.error(f"Failed to load config file: {e}")

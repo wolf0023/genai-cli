@@ -1,6 +1,7 @@
 from datetime import datetime
 from litellm.exceptions import AuthenticationError, RateLimitError, BadRequestError
 import dotenv
+from jsonschema import ValidationError
 
 from genai_cli.core.session import SessionManager
 from genai_cli.core.history import HistoryStorage
@@ -37,14 +38,43 @@ class ChatApp:
         self.ui = ChatUI()
 
         self.model_config = ModelConfig()
-        self.main_config = ConfigManager(self.logger, self.ui)
+        self.main_config = ConfigManager(self.logger)
+
 
         self.llm_chat = LLMChat(self.logger)
 
-        # Load available models from configuration
-        self.model_config.load_models()
+        # Load configurations for models and main settings.
+        self._load_configurations()
 
-    def main_loop(self) -> bool:
+    def _load_configurations(self):
+        """ Load model and main configurations.
+
+        Raises:
+            ValueError: If there is an error in loading model configuration, a ValueError will be raised with a message prompting the user to check the model configuration file.
+
+            ValidationError: If there is an error in loading main configuration, a ValidationError will be raised with a message indicating that the default configuration will be loaded instead.
+
+            Exception: If there is any unexpected error during loading configurations, a generic Exception will be raised with a message indicating that an unexpected error occurred, and the error details will be logged for further investigation.
+        """
+        # Load model configuration and main configuration.
+        try:
+            self.model_config.load_models()
+            self.main_config.load_config()
+
+        except ValueError:
+            self.ui.print_error(f"Error in loading model configuration: Please check your model configuration file.")
+            raise # Re-raise the exception to prevent starting the app without model configuration
+
+        except ValidationError:
+            self.ui.print_error(f"Error in loading configuration: Loading default configuration instead.")
+
+        except Exception as e:
+            self.ui.print_error(f"Unexpected error in loading configurations.")
+            self.logger.error(f"Unexpected error in loading configurations: {str(e)}", exc_info=True)
+            raise # Re-raise the exception to prevent starting the app without proper configuration
+
+
+    def _main_loop(self) -> bool:
         """ Main chat loop for user interaction.
         Returns:
             bool: True to continue the chat, False to exit.
@@ -165,7 +195,7 @@ class ChatApp:
 
         continue_chat = True
         while continue_chat:
-            continue_chat = self.main_loop()
+            continue_chat = self._main_loop()
 
         # Save conversation history on exit
         session_data = self.session_manager.current_session
