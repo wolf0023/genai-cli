@@ -14,3 +14,4 @@ LOG_TIME_FORMAT = "%Y-%m-%d_%H-%M-%S"
 
 # Other constants
 TITLE_MAX_LENGTH = 30
+COMMAND_PREFIX = "/"
