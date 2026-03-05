@@ -138,6 +138,10 @@ class HistoryStorage:
             Exception: If there is an error saving the history file.
         """
         try: 
+            # If the session does not have any messages, skip saving the history file
+            if not session_data.messages:
+                return
+
             # If the session is new, create a new history file with a timestamp
             if session_data.filename is None or not self._check_valid_file(session_data.filename):
                 self._create_history(session_data)
