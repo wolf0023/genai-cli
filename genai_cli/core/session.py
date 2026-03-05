@@ -219,3 +219,22 @@ class SessionManager:
         """
         self.current_session = None
 
+    def change_model(self, model_name: str) -> None:
+        """Change the model for the current conversation session
+
+            Args:
+                model_name (str): The name of the new model to set for the current session.
+
+            Raises:
+                ValueError: If no session is currently loaded or if the model name is empty.
+
+            Note:
+                The specified model is not validated against available models; it is the caller's responsibility to ensure the model name is valid.
+        """
+        if self.current_session is None:
+            raise ValueError("No session is currently loaded.")
+
+        self.current_session.model = model_name
+        timestamp_str = datetime.now().isoformat(sep=' ', timespec='seconds')
+        self.current_session.updated_at = timestamp_str
+
