@@ -100,6 +100,11 @@ class LLMChat:
         if isinstance(response, CustomStreamWrapper):
             return "Something went wrong. Please try again."
 
+        # Check if choices are returned in the response
+        if not response.choices:
+            self.logger.error("No choices returned in the response.")
+            return "Something went wrong. Please try again."
+
         choice: Choices|StreamingChoices = response.choices[0]
 
         # Log token usage information if available
