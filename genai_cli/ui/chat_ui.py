@@ -3,6 +3,8 @@ from rich.markdown import Markdown
 from rich.status import Status
 from prompt_toolkit import PromptSession
 from prompt_toolkit.key_binding.vi_state import InputMode
+from prompt_toolkit.completion import Completer
+from prompt_toolkit.shortcuts import CompleteStyle
 
 from genai_cli.core.session import Message
 from genai_cli.enums import Role
@@ -14,9 +16,18 @@ class ChatUI:
         console (Console): The rich console for rendering messages.
         prompt_session (PromptSession): The prompt session for user input.
     """
-    def __init__(self):
+    def __init__(self, command_completer: Completer):
+        """ Initialize the ChatUI with a command completer for user input.
+
+        Args:
+            command_completer (NestedCompleter): A completer for command auto-completion in the user prompt.
+        """
         self.console = Console()
-        self.prompt_session = PromptSession()
+        self.prompt_session = PromptSession(
+            completer=command_completer,
+            complete_style=CompleteStyle.READLINE_LIKE,
+            complete_while_typing=True
+        )
 
     def status_line_text(self) -> str:
         """ Get the status line for the chat UI.
@@ -147,3 +158,24 @@ class ChatUI:
             Status: A rich Status context manager.
         """
         return self.console.status("[bold green]Generating response...[/bold green]\n\n")
+
+    def print_command_result(self, result: str):
+        """ Print the result of a command execution.
+        Args:
+            result (str): The result to print.
+        """
+        self.console.print("\n", result, "\n")
+
+    def print_welcome_message(self):
+        """ Print a welcome message to the console.
+        """
+        self.console.print(
+            "\n",
+            "[bold cyan]____ ____ _  _ ____ _    ____ _    _ [/bold cyan]\n",
+            "[bold cyan]| __ |___ |\ | |__| | __ |    |    | [/bold cyan]\n",
+            "[bold cyan]|__] |___ | \| |  | |    |___ |___ | [/bold cyan]\n",
+            "\n",
+            "[bold green]Welcome to GenAI CLI![/bold green]\n",
+            "[bold green]Type /help for a list of available commands.[/bold green]\n",
+            "\n"
+        )
