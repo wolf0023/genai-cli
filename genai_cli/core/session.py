@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from genai_cli.enums import Role
+from genai_cli.const import DEFAULT_SESSION_TITLE
 
 @dataclass
 class Message:
@@ -172,7 +173,7 @@ class SessionManager:
     def create_session(
             self,
             model: str,
-            title: str = "New Conversation"
+            title: str = DEFAULT_SESSION_TITLE
     ) -> Session:
         """ Create a new conversation session
         Args:

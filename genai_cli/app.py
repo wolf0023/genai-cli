@@ -11,13 +11,13 @@ from genai_cli.enums import Role
 from genai_cli.ui.chat_ui import ChatUI
 from genai_cli.config.model import ModelConfig
 from genai_cli.config.config import ConfigManager
+from genai_cli.const import TITLE_MAX_LENGTH
+from genai_cli.const import DEFAULT_SESSION_TITLE
 
 # Load environment variables from the .env file
 # This is necessary to ensure that any required API keys or configurations are available.
 # Please check LiteLLM documantation for more details on required environment variables.
 dotenv.load_dotenv()
-
-from const import TITLE_MAX_LENGTH
 
 class ChatApp:
     """ Chat application class for managing the chat UI.
@@ -93,7 +93,7 @@ class ChatApp:
             history = self.session_manager.current_session.messages
 
             # If session's title is empty, set it to the first user input
-            if len(history) == 0:
+            if len(history) == 0 and self.session_manager.current_session.title == DEFAULT_SESSION_TITLE:
                 self.session_manager.current_session.title = ''.join(user_input.split())[:TITLE_MAX_LENGTH]
                 self.logger.info(f"Session title set to: {self.session_manager.current_session.title}")
 
