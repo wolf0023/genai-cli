@@ -15,17 +15,11 @@ class SessionsCommand(BaseCommand):
 
     def __init__(
         self,
-        get_current_session_callback: Callable[[], Session],
+        get_current_session_callback: Callable[[], Session|None],
         get_histories_callback: Callable[[], list[History]]
     ):
-        """Initialize the ListCommand with the current session and chat histories.
-
-        Args:
-            get_current_session_callback (Callable): A callback function to retrieve the current session.
-            get_histories_callback (list[History]): A callback function to get the list of conversation history.
-        """
         super().__init__()
-        self.get_current_session_callback: Callable[[], Session] = get_current_session_callback
+        self.get_current_session_callback: Callable[[], Session|None] = get_current_session_callback
         self.get_histories_callback: Callable[[], list[History]] = get_histories_callback
 
     def _list_histories(self) -> list[str]:

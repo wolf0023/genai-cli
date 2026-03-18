@@ -100,7 +100,7 @@ class ChatApp:
                 get_main_commands_callback=lambda: self.command_registry.commands
             ),
             SessionsCommand(
-                get_current_session_callback=self.session_manager.get_current_session,
+                get_current_session_callback=lambda: self.session_manager.current_session,
                 get_histories_callback=lambda: self.history_storage.histories
             ),
             SelectCommand(
