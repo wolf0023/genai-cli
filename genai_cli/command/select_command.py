@@ -17,12 +17,14 @@ class SelectCommand(BaseCommand):
         self,
         get_histories_callback: Callable[[], list[History]],
         get_history_callback: Callable[[str], Session],
-        load_session_callback: Callable[[Session], None]
+        load_session_callback: Callable[[Session], None],
+        get_current_session_callback: Callable[[], Session]
     ):
         super().__init__()
         self.get_histories_callback: Callable[[], list[History]] = get_histories_callback
         self.get_history_callback: Callable[[str], Session] = get_history_callback
         self.load_session_callback: Callable[[Session], None] = load_session_callback
+        self.get_current_session_callback: Callable[[], Session] = get_current_session_callback
 
     @override
     def execute(self, argc: int, argv: list[str]) -> str:
@@ -38,6 +40,10 @@ class SelectCommand(BaseCommand):
                 try:
                     conversation_id = int(argv[1])
                     conversation_filename = self.get_histories_callback()[conversation_id].filename
+
+                    # Check if the selected conversation is already the current session
+                    if self.get_current_session_callback().filename == conversation_filename:
+                        return f"[bold yellow]Conversation '{self.get_current_session_callback().title}' is already selected.[/bold yellow]"
 
                     session = self.get_history_callback(conversation_filename)
                     self.load_session_callback(session)

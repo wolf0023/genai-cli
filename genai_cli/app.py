@@ -106,7 +106,8 @@ class ChatApp:
             SelectCommand(
                 get_histories_callback=lambda: self.history_storage.histories,
                 get_history_callback=self.history_storage.get_history,
-                load_session_callback=self.session_manager.load_session
+                load_session_callback=self.session_manager.load_session,
+                get_current_session_callback=self.session_manager.get_current_session
             ),
             NewCommand(
                 main_config=self.main_config.config,
