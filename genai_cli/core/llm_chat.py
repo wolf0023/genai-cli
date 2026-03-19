@@ -97,23 +97,17 @@ class LLMChat:
         )
 
         # Avoid 'Attribute "choices" is unknown'
-        if isinstance(response, CustomStreamWrapper):
-            return "Something went wrong. Please try again."
-
-        # Check if choices are returned in the response
-        if not response.choices:
-            self.logger.error("No choices returned in the response.")
-            return "Something went wrong. Please try again."
-
-        choice: Choices|StreamingChoices = response.choices[0]
+        assert isinstance(response, ModelResponse)
 
         # Log token usage information if available
         self.logger.info(f"Prompt tokens: {response.usage.get('prompt_tokens', 'N/A')}")
         self.logger.info(f"Completion tokens: {response.usage.get('completion_tokens', 'N/A')}")
 
+        # Get the first choice from the response
+        choice: Choices|StreamingChoices = response.choices[0]
+
         # Avoid 'Attribute "message" is unknown'
-        if isinstance(choice, StreamingChoices):
-            return "Something went wrong. Please try again."
+        assert isinstance(choice, Choices)
 
         return choice.message["content"]
 
