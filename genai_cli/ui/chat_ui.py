@@ -5,6 +5,7 @@ from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.key_binding.vi_state import InputMode
 from prompt_toolkit.layout.containers import HSplit, VSplit, Window
 from prompt_toolkit.layout.layout import Layout
+from prompt_toolkit.layout.dimension import Dimension
 from prompt_toolkit.layout.controls import FormattedTextControl
 from prompt_toolkit.formatted_text import FormattedText
 from prompt_toolkit.widgets import TextArea
@@ -46,7 +47,8 @@ class ChatUI:
         input_field (TextArea): Allows the user to type their messages and commands.
         waiting_message_field (Window): Displays a waiting indicator spinner when the applicatoin is in a waiting state (e.g., waiting for a response from the model).
         vi_mode_field (Window): Displays the current Vi mode (e.g., NORMAL, INSERT, REPLACE) in a fixed-width area.
-        info_field (TextArea): Displays additional information such as the current model or tips for using the CLI.
+        status_field (TextArea): Displays the status bar. (e.g. the model name or title of the current session, or any other status information)
+        info_field (TextArea): Displays additional information or messages to the user.
         input_container (HSplit): A container that organizes the input field and info field vertically, separated by horizontal lines.
         on_submit (Callable[[str], Coroutine]): A callback function that is called when the user submits input, receiving the input string as an argument.
         bindings (KeyBindings): Defines key bindings for user interactions (e.g., submitting input, exiting the app).
@@ -89,12 +91,21 @@ class ChatUI:
             width=16,
             height=1
         )
+        self.status_field = TextArea(
+            style="class:status-field",
+            text="",
+            focusable=False,
+            read_only=True,
+            height=1,
+            width=0
+        )
         self.info_field = TextArea(
             style="class:info-field",
             text="",
             focusable=False,
             read_only=True,
-            height=1
+            height=1,
+            width=0
         )
 
         self.input_container = HSplit([
@@ -104,8 +115,10 @@ class ChatUI:
             Window(height=1, char="─", style="class:separator"),
             VSplit([
                 self.vi_mode_field,
-                self.info_field
-            ])
+                Window(),
+                self.status_field
+            ]),
+            self.info_field
         ])
 
         # Set up key bindings for the application.
@@ -222,39 +235,34 @@ class ChatUI:
         for message in histories:
             self.print_conversation(message.content, message.role)
 
-    def create_info_message(
+    def update_status_bar(
         self,
-        model_name: str | None = None,
-        session_title: str | None = None,
-        additional_info: str | None = None
-    ) -> str:
-        """Create an info message string based on the current model name, session title, and any additional information.
+        status_message: str
+    ):
+        """Update the status bar with a new message.
 
         Args:
-            model_name (str | None): The name of the current model being used in the conversation.
-            current_session_title (str | None): The title of the current conversation session.
-            additional_info (str | None): Any additional information to include in the info message.
+            status_message (str): The message to display in the status bar.
         """
-        info_parts: list[str] = []
-        if model_name:
-            info_parts.append(f"[Model] {model_name}")
-        if session_title:
-            info_parts.append(f"[Session] {session_title}")
-        if additional_info:
-            info_parts.append(additional_info)
-
-        return " | ".join(info_parts)
+        self.status_field.text = status_message
+        self.status_field.window.width = Dimension(
+            preferred=len(status_message)+1,
+            max=len(status_message)+1
+        )
+        self.app.invalidate()
 
     def update_info(
         self,
-        info_message: str,
+        info_message: str
     ):
-        """Update the info field with a new info message.
+        """Update the info field with a new message.
 
         Args:
-            info_message (str): The new info message to display in the info field.
+            info_message (str): The message to display in the info field.
         """
         self.info_field.text = info_message
+        self.info_field.window.width = Dimension(preferred=len(info_message), max=len(info_message))
+        self.app.invalidate()
 
     def print_welcome(self):
         """Print the welcome message to the terminal when the application starts."""
@@ -287,17 +295,23 @@ class ChatUI:
 
     def start_app(
         self,
-        info_message: str | None = None
+        info_message: str | None = None,
+        status_message: str | None = None
     ):
         """Start the prompt_toolkit application to run the chat UI.
 
         Args:
-            info_message (str | None): An optional message to display in the info field when the application starts. If provided, the info field will be updated with this message before the application runs.
+            info_message (str | None): An optional message to display in the info field when the application starts.
+            status_message (str | None): An optional message to display in the status bar when the application starts.
         """
-        if info_message is not None:
-            self.app.run(pre_run=lambda: self.update_info(info_message=info_message))
-        else:
-            self.app.run()
+        # Define a pre-run function to update the info and status bar with the provided messages before the application starts.
+        def pre_run():
+            if info_message is not None:
+                self.update_info(info_message)
+            if status_message is not None:
+                self.update_status_bar(status_message)
+
+        self.app.run(pre_run=pre_run)
 
     def exit_app(self):
         """Exit the application gracefully by resetting the input container to prevent further input and updates, and then calling the app's exit method."""

@@ -140,24 +140,45 @@ class ChatApp:
             except ValueError as e:
                 self.logger.error(f"Failed to register command: {e}")
 
-    def _update_info_message(
+    def _create_status_message(
         self,
-        additional_info: str | None = None
-    ):
-        """Update the information message displayed in the chat UI with the current session's model and title, along with any additional information provided.
+        model_name: str | None = None,
+        session_title: str | None = None,
+    ) -> str:
+        """Create a status message for the status filed that includes the current model name and session title if provided.
 
         Args:
-            additional_info (str | None): Optional additional information to include in the info message.
+            model_name (str | None): The name of the current model being used in the conversation.
+            current_session_title (str | None): The title of the current conversation session.
         """
+        info_parts: list[str] = []
+        if model_name:
+            info_parts.append(f"[Model] {model_name}")
+        if session_title:
+            info_parts.append(f"[Session] {session_title}")
+
+        return "  ".join(info_parts)
+
+    def _update_status_and_info(
+        self,
+        additional_info: str = ""
+    ):
+        """Update the status bar and information section in the chat UI based on the current sesison's model and title, along with any additional information provided.
+
+        Args:
+            additional_info (str): Any additional information to be displayed in the information section of the chat UI, such as error messages, tips, or other relevant details that the user should be aware of.
+        """
+
         if self.session_manager.current_session is not None:
-            self.ui.update_info(
-                self.ui.create_info_message(
+            self.ui.update_status_bar(
+                self._create_status_message(
                     model_name=self.session_manager.current_session.model,
                     session_title=self.session_manager.current_session.title,
-                    additional_info=additional_info
             ))
+            self.ui.update_info(additional_info)
         else:
-            self.ui.update_info(info_message=additional_info or "")
+            self.ui.update_status_bar("No active session")
+            self.ui.update_info(additional_info)
 
     async def _process_command(self, user_input: str) -> bool:
         """ Process a user input that is identified as a command.
@@ -304,7 +325,7 @@ class ChatApp:
         """
         # Check if input is currently blocked (e.g., while processing a command or waiting for an LLM response). If it is blocked, inform the user and ignore the input.
         if self.is_input_blocked:
-            self._update_info_message(additional_info="Input is currently blocked.")
+            self._update_status_and_info(additional_info="Input is currently blocked.")
             return
 
         # Set input block to prevent processing new inputs while the current input is being processed (either as a command or an LLM response).
@@ -323,7 +344,7 @@ class ChatApp:
                 self.ui.exit_app()
 
             # Update the information message in the chat UI to reflect any changes that may have occurred as a result of processing the command (e.g., session change, model change, etc.).
-            self._update_info_message()
+            self._update_status_and_info()
 
             return
 
@@ -350,11 +371,12 @@ class ChatApp:
 
         # Run the chat UI application
         self.ui.start_app(
-            self.ui.create_info_message(
+            info_message="Type your message or command (type '/help' for available commands).",
+            status_message=self._create_status_message(
                 model_name=self.session_manager.current_session.model,
-                session_title=self.session_manager.current_session.title,
-                additional_info="Type '/help' for available commands."
-        ))
+                session_title=self.session_manager.current_session.title
+            )
+        )
 
         # Save conversation history on exit
         session_data = self.session_manager.current_session

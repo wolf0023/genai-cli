@@ -8,7 +8,8 @@ STYLE = Style.from_dict({
     "vi-mode-normal": "bg:default fg:ansiblue bold",
     "vi-mode-insert": "bg:default fg:ansigreen bold",
     "vi-mode-replace": "bg:default fg:ansired bold",
-    "info-field": "bg:default fg:ansiwhite",
+    "info-field": "bg:default fg:ansiblue",
+    "status-field": "bg:default fg:ansiyellow",
     "separator": "bg:default fg:ansiblue",
 
     # Completions menu
