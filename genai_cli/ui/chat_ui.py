@@ -13,6 +13,7 @@ from prompt_toolkit.enums import EditingMode
 from prompt_toolkit.completion import Completer
 from typing import Callable
 from rich.console import Console
+from rich.markup import escape
 from asyncio import create_task, sleep
 from collections.abc import Coroutine
 
@@ -202,9 +203,10 @@ class ChatUI:
             message (str): The message content.
             role (Role): The role of the message sender (e.g., Role.USER or Role.ASSISTANT) to determine formatting.
         """
+        message = escape(message)
         match role:
             case Role.USER:
-                self._print(f"[gray58]> {message}[/gray58]")
+                self._print(f"[bright_black]> [/bright_black][bold blue]{message}[/bold blue]")
             case Role.ASSISTANT:
                 self._print(f"{message}")
             case _:
@@ -218,13 +220,20 @@ class ChatUI:
         """
         self._print(f"[bold red]Error: [/bold red]{error_message}")
 
-    def print_command_output(self, command_output: str):
-        """Print command output to the output field with appropriate formatting.
+    def print_command_output(
+        self,
+        command_prompt: str,
+        command_output: str
+    ):
+        """Print the command prompt and its output to the terminal.
 
         Args:
+            command_prompt (str): The command that was executed, to be displayed as a prompt before the output.
             command_output (str): The output from a command.
         """
-        self._print(f"{command_output}")
+        command_prompt = escape(command_prompt)
+        self._print(f"[on bright_black] [yellow]{command_prompt}[/yellow] [/on bright_black][bright_black][/bright_black]")
+        self._print(command_output)
 
     def print_histories(self, histories: list[Message]):
         """Print a list of conversation histories to the output field, formatting each message based on its role.

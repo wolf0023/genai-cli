@@ -197,7 +197,7 @@ class ChatApp:
             output = self.command_handler.handle_command(argc, argv)
 
             # Print the result of the command execution to the user interface.
-            self.ui.print_command_output(output)
+            self.ui.print_command_output(user_input, output)
 
             # Check if the current session has changed after executing the command (e.g., a new session was created or an existing session was loaded).
             if self.session_manager.current_session is not previous_session:
