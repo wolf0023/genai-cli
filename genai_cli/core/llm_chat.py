@@ -1,4 +1,4 @@
-from litellm import completion, ModelResponse, CustomStreamWrapper, Choices, StreamingChoices
+from litellm import acompletion, ModelResponse, CustomStreamWrapper, Choices, StreamingChoices
 from datetime import datetime
 
 from genai_cli.enums import Role
@@ -62,14 +62,14 @@ class LLMChat:
             "content": message.content
         }
 
-    def get_chat_response(
+    async def get_chat_response(
         self,
         model: str,
         system_prompt: str,
         user_prompt: str,
         history: list[Message],
         thinking: bool = False
-    ):
+    ) -> str:
         """ Get a chat response from the LLM model.
             Args:
                 model: The LLM model to use.
@@ -90,7 +90,7 @@ class LLMChat:
         messages.append({"role": Role.USER.value, "content": user_prompt})
 
         # Get the completion from the LLM model
-        response: ModelResponse|CustomStreamWrapper = completion(
+        response: ModelResponse|CustomStreamWrapper = await acompletion(
             model=model, 
             messages=messages,
             reasoning_effort="medium" if thinking else None

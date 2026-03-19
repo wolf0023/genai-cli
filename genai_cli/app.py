@@ -43,6 +43,7 @@ class ChatApp:
         ui (ChatUI): User interface for chat interactions.
         model_config (ModelConfig): Configuration for available models.
         main_config (ConfigManager): Main configuration manager for app settings.
+        is_input_blocked (bool): A flag to indicate whether user input is currently blocked (e.g., while processing a command or waiting for an LLM response).
     """
     def __init__(self):
         self.logger = Logger().logger
@@ -57,7 +58,10 @@ class ChatApp:
         self.command_completer = CommandCompleter(self.logger, self.command_registry)
 
         # Initialize command completions for the chat UI based on the commands available in the CommandHandler.
-        self.ui = ChatUI(self.command_completer)
+        self.ui = ChatUI(
+            self.command_completer,
+            self.handle_user_input
+        )
 
         self.llm_chat = LLMChat(self.logger)
 
@@ -66,6 +70,9 @@ class ChatApp:
 
         # Register all available commands in the command registry.
         self._register_all_commands()
+
+        # A flag to indicate whether user input is currently blocked (e.g., while processing a command or waiting for an LLM response).
+        self.is_input_blocked: bool = False
 
     def _load_configurations(self):
         """ Load model and main configurations.
@@ -83,7 +90,7 @@ class ChatApp:
             self.main_config.load_config()
 
         except ValueError:
-            self.ui.print_error(f"Error in loading model configuration: Please check your model configuration file.")
+            self.logger.error(f"Error in loading model configuration: Please check your model configuration file.")
             raise # Re-raise the exception to prevent starting the app without model configuration
 
         except ValidationError:
@@ -133,46 +140,88 @@ class ChatApp:
             except ValueError as e:
                 self.logger.error(f"Failed to register command: {e}")
 
-    def _main_loop(self) -> bool:
-        """ Main chat loop for user interaction.
-        Returns:
-            bool: True to continue the chat, False to exit.
+    def _update_info_message(
+        self,
+        additional_info: str | None = None
+    ):
+        """Update the information message displayed in the chat UI with the current session's model and title, along with any additional information provided.
+
+        Args:
+            additional_info (str | None): Optional additional information to include in the info message.
         """
-        # Main chat loop
+        if self.session_manager.current_session is not None:
+            self.ui.update_info(
+                self.ui.create_info_message(
+                    model_name=self.session_manager.current_session.model,
+                    session_title=self.session_manager.current_session.title,
+                    additional_info=additional_info
+            ))
+        else:
+            self.ui.update_info(info_message=additional_info or "")
+
+    async def _process_command(self, user_input: str) -> bool:
+        """ Process a user input that is identified as a command.
+
+        Args:
+            user_input (str): The raw user input string that represents a command.
+
+        Returns:
+            bool: A boolean value indicating whether the application should continue running (True) or exit (False) after processing the command.
+        """
         try:
-            if self.session_manager.current_session is None:
-                raise Exception("No active session found.")
+            self.logger.info(f"Processing command: {user_input}")
+            argc, argv = self.command_handler.parse_command(user_input)
 
-            # Prompt user for input
-            user_input = self.ui.get_user_prompt()
+            previous_session = self.session_manager.current_session
+            output = self.command_handler.handle_command(argc, argv)
 
-            # Check if user input is a command
-            if self.command_handler.is_command(user_input):
-                argc, argv = self.command_handler.parse_command(user_input)
+            # Print the result of the command execution to the user interface.
+            self.ui.print_command_output(output)
 
-                previous_session = self.session_manager.current_session
-                output = self.command_handler.handle_command(argc, argv)
+            # Check if the current session has changed after executing the command (e.g., a new session was created or an existing session was loaded).
+            if self.session_manager.current_session is not previous_session:
+                # If there was a previous session before executing the command, save its history to the history storage.
+                if previous_session is not None:
+                    self.history_storage.save_history(previous_session)
+                    self.logger.info(f"Previous session '{previous_session.title}' saved to history.")
 
-                # Print the result of the command execution to the user interface.
-                self.ui.print_command_result(output)
+                # If the session has changed, update the chat history display in the user interface to reflect the messages of the new current session.
+                self.logger.info("Session changed after command execution. Updating chat history display.")
+                new_history = self.session_manager.current_session.messages
+                self.ui.print_histories(new_history)
 
-                # Check if the current session has changed after executing the command (e.g., a new session was created or an existing session was loaded).
-                if self.session_manager.current_session is not previous_session:
+            return True
 
-                    # If there was a previous session before executing the command, save its history to the history storage.
-                    if previous_session is not None:
-                        self.history_storage.save_history(previous_session)
-                        self.logger.info(f"Previous session '{previous_session.title}' saved to history.")
+        except CommandError as e:
+            self.ui.print_error(str(e))
+            return True
 
-                    # If the session has changed, update the chat history display in the user interface to reflect the messages of the new current session.
-                    self.logger.info("Session changed after command execution. Updating chat history display.")
-                    new_history = self.session_manager.current_session.messages
-                    self.ui.print_session_history(new_history)
+        except ExitError:
+            return False
 
-                return True # Continue the chat loop after handling the command
+        except Exception as e:
+            self.ui.print_error(f"Unexpected error occurred. Please check the logs for more details.")
+            self.logger.error(f"Unexpected error during handling command: {str(e)}", exc_info=True)
+            return False
 
+    async def _process_llm_response(self, user_input: str) -> bool:
+        """Process a user input that is identified as a message to the LLM, sending the input to the model and handling the response.
+
+        Args:
+            user_input (str): The raw user input string that is intended to be sent to the LLM model for a response.
+
+        Returns:
+            bool: A boolean value indicating whether the application should continue running (True) or exit (False) after processing the LLM response.
+        """
+        try:
+            # Record the timestamp of the user input to associate it with the corresponding AI response in the session history.
             user_timestamp = datetime.now()
-            self.logger.info("User input received.")
+            self.logger.info("Processing user input for LLM response.")
+
+            # Check if there is an active session before processing the LLM response.
+            if self.session_manager.current_session is None:
+                self.logger.error("No active session found when processing LLM response.")
+                raise Exception("No active session found. Please create or load a session before sending messages.")
 
             # Get current session history
             history = self.session_manager.current_session.messages
@@ -182,28 +231,30 @@ class ChatApp:
                 self.session_manager.current_session.title = ''.join(user_input.split())[:TITLE_MAX_LENGTH]
                 self.logger.info(f"Session title set to: {self.session_manager.current_session.title}")
 
-            with self.ui.waiting_indicator():
-                # Get model configuration for current session
-                model = self.model_config.get_model(self.session_manager.current_session.model)
+            # Get model configuration for current session
+            model = self.model_config.get_model(self.session_manager.current_session.model)
 
-                # Check if model configuration is found
-                if model is None:
-                    raise Exception(f"Model '{self.session_manager.current_session.model}' not found.")
+            # Check if model configuration is found
+            if model is None:
+                raise Exception(f"Model '{self.session_manager.current_session.model}' not found.")
 
-                # Get AI response
-                self.logger.info(f"Sending user input to model '{model.model_id}' for response.")
-                response = self.llm_chat.get_chat_response(
-                    model=model.model_id,
-                    system_prompt=self.main_config.config.system_prompt,
-                    user_prompt=self.llm_chat.create_user_prompt(
-                        user_input, 
-                        current_time=user_timestamp
-                    ),
-                    history=history,
-                    thinking=model.thinking
-                )
+            # Append user input to chat UI before sending request to model, so that user can see their message immediately.
+            self.ui.print_conversation(user_input, role=Role.USER)
 
-            self.ui.print_ai_message(response)
+            # Get AI response
+            self.logger.info(f"Sending user input to model '{model.model_id}' for response.")
+            response = await self.llm_chat.get_chat_response(
+                model=model.model_id,
+                system_prompt=self.main_config.config.system_prompt,
+                user_prompt=self.llm_chat.create_user_prompt(
+                    user_prompt=user_input,
+                    current_time=user_timestamp
+                ),
+                history=history,
+                thinking=model.thinking
+            )
+
+            self.ui.print_conversation(response, role=Role.ASSISTANT)
             assistant_timestamp = datetime.now()
             self.logger.info("AI response received and displayed to user.")
 
@@ -222,14 +273,10 @@ class ChatApp:
 
             return True
 
-        except (KeyboardInterrupt, EOFError):
-            # Exit on Ctrl+C or Ctrl+D
-            return False
-
         except AuthenticationError:
             self.ui.print_error("Invalid API key or credentials.")
             self.logger.error("Error during sending request to model: Authentication failed.")
-            return False
+            return True
 
         except RateLimitError:
             self.ui.print_error("Rate limit exceeded. Please try again later.")
@@ -244,31 +291,70 @@ class ChatApp:
             self.logger.error(f"Error during sending request to model: Bad request - {str(e)}")
             return True
 
-        except CommandError as e:
-            self.ui.print_error(str(e))
-            return True
-
-        except ExitError:
-            return False
-
         except Exception as e:
             self.ui.print_error(f"Unexpected error occurred. Please check the logs for more details.")
             self.logger.error(f"Unexpected error during main loop: {str(e)}", exc_info=True)
             return False
 
+    async def handle_user_input(self, user_input: str):
+        """Handle user input from the chat UI, determining whether it is a command or a message to the LLM and processing it accordingly.
+
+        Args:
+            user_input (str): The raw user input string from the chat UI.
+        """
+        # Check if input is currently blocked (e.g., while processing a command or waiting for an LLM response). If it is blocked, inform the user and ignore the input.
+        if self.is_input_blocked:
+            self._update_info_message(additional_info="Input is currently blocked.")
+            return
+
+        # Set input block to prevent processing new inputs while the current input is being processed (either as a command or an LLM response).
+        self.is_input_blocked = True
+
+        # Check if user input is a command
+        if self.command_handler.is_command(user_input):
+            self.ui.start_waiting_indicator("Processing command...")
+            success = await self._process_command(user_input)
+            self.ui.stop_waiting_indicator()
+
+            self.is_input_blocked = False
+
+            # If processing the command indicates that the application should exit (e.g., the user entered the exit command), then call the UI's exit_app method to close the application.
+            if not success:
+                self.ui.exit_app()
+
+            # Update the information message in the chat UI to reflect any changes that may have occurred as a result of processing the command (e.g., session change, model change, etc.).
+            self._update_info_message()
+
+            return
+
+        # If it's not a command, process it as a message to the LLM
+        self.ui.start_waiting_indicator("Waiting for response...")
+        success = await self._process_llm_response(user_input)
+        self.ui.stop_waiting_indicator()
+
+        self.is_input_blocked = False
+
+        # If processing the LLM response indicates that the application should exit (e.g., due to an unrecoverable error), then call the UI's exit_app method to close the application.
+        if not success:
+            self.ui.exit_app()
+
     def start_chat(self):
         """ Start an interactive chat session with the AI assistant.
         """
         self.logger.info("Starting chat application.")
+        self.ui.print_welcome()
 
         # Load new session on start
         self.logger.info("New chat session created.")
         self.session_manager.create_session(model=self.main_config.config.default_model)
-        self.ui.print_welcome_message()
 
-        continue_chat = True
-        while continue_chat:
-            continue_chat = self._main_loop()
+        # Run the chat UI application
+        self.ui.start_app(
+            self.ui.create_info_message(
+                model_name=self.session_manager.current_session.model,
+                session_title=self.session_manager.current_session.title,
+                additional_info="Type '/help' for available commands."
+        ))
 
         # Save conversation history on exit
         session_data = self.session_manager.current_session
@@ -276,7 +362,7 @@ class ChatApp:
             self.history_storage.save_history(session_data)
             self.logger.info("Chat session ended and history saved.")
 
-        self.ui.print_exit_message()
+        self.ui.print_exit()
 
 if __name__ == "__main__":
     chat_app = ChatApp()
