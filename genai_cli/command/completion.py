@@ -44,7 +44,7 @@ class CommandCompleter(Completer):
         Notes:
             For example, suppose there is a command "/cmd sub [opt1(option) | opt2(option)]".
             If the user types "/cmd sub opt", the variable `parts[1:]` will be ["sub", "opt"].
-            Futhermore, the variable `command` is expected to contain "sub" command object.
+            Furthermore, the variable `command` is expected to contain "sub" command object.
         """
         command_name = parts[0][1:]  # Remove the leading "/"
         command = self.main_commands.get(command_name)

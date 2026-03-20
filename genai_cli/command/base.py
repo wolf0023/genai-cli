@@ -43,7 +43,7 @@ class BaseCommand:
             def _register_all_subcommands(self):
                 try:
                     self._register_subcommand(Sub1Command())
-                    self._regisiter_subcommand(Sub2Command())
+                    self._register_subcommand(Sub2Command())
                 except ValueError as e:
                     # Handle the error, such as logging it or re-raising it with additional context
                     logging.Logger.error(f"Failed to register subcommand: {e}")

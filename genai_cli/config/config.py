@@ -31,7 +31,6 @@ class ConfigManager:
         config (Config): The loaded configuration settings.
         config_path (str): The path to the configuration directory.
         config_file (str): The path to the configuration file.
-        config_schema (str): The path to the configuration schema file.
         logger (logging.Logger): Logger instance for logging messages.
 
     Raises:
@@ -41,7 +40,6 @@ class ConfigManager:
         self.config: Config = Config()
         self.config_path: str = os.path.expanduser(CONFIG_DIR)
         self.config_file: str = os.path.join(self.config_path, CONFIG_FILE)
-        self.config_schema: str = os.path.join(os.path.dirname(__file__), 'config_schema.json')
         self.logger = logger
 
         os.makedirs(self.config_path, exist_ok=True)

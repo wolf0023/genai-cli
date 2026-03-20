@@ -27,7 +27,7 @@ from genai_cli.const import DEFAULT_SESSION_TITLE
 
 # Load environment variables from the .env file
 # This is necessary to ensure that any required API keys or configurations are available.
-# Please check LiteLLM documantation for more details on required environment variables.
+# Please check LiteLLM documentation for more details on required environment variables.
 dotenv.load_dotenv()
 
 class ChatApp:

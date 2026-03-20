@@ -46,7 +46,7 @@ class ChatUI:
 
     Attributes:
         input_field (TextArea): Allows the user to type their messages and commands.
-        waiting_message_field (Window): Displays a waiting indicator spinner when the applicatoin is in a waiting state (e.g., waiting for a response from the model).
+        waiting_message_field (Window): Displays a waiting indicator spinner when the application is in a waiting state (e.g., waiting for a response from the model).
         vi_mode_field (Window): Displays the current Vi mode (e.g., NORMAL, INSERT, REPLACE) in a fixed-width area.
         status_field (TextArea): Displays the status bar. (e.g. the model name or title of the current session, or any other status information)
         info_field (TextArea): Displays additional information or messages to the user.
@@ -176,7 +176,7 @@ class ChatUI:
             return ""
 
     async def _animate_waiting_indicator(self):
-        """Animate a waiting indicator spinner in the wating_indicator_field while the application is in a waiting state."""
+        """Animate a waiting indicator spinner in the waiting_indicator_field while the application is in a waiting state."""
         i = 0
         while self.is_waiting:
             self.spinner_index = i % len(spinner_frames)
