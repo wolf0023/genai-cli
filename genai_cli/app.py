@@ -25,11 +25,6 @@ from genai_cli.command.base import CommandError, ExitError
 from genai_cli.const import TITLE_MAX_LENGTH
 from genai_cli.const import DEFAULT_SESSION_TITLE
 
-# Load environment variables from the .env file
-# This is necessary to ensure that any required API keys or configurations are available.
-# Please check LiteLLM documentation for more details on required environment variables.
-dotenv.load_dotenv()
-
 class ChatApp:
     """ Chat application class for managing the chat UI.
     Attributes:
@@ -386,6 +381,13 @@ class ChatApp:
 
         self.ui.print_exit()
 
-if __name__ == "__main__":
+def main():
+    """ Main function to start the chat application."""
+    # Load environment variables from the .env file
+    # This is necessary to ensure that any required API keys or configurations are available.
+    # Please check LiteLLM documentation for more details on required environment variables.
+    dotenv.load_dotenv()
+
+    # Initialize the ChatApp and start the chat session.
     chat_app = ChatApp()
     chat_app.start_chat()
