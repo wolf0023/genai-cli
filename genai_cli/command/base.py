@@ -46,7 +46,7 @@ class BaseCommand:
                     self._register_subcommand(Sub2Command())
                 except ValueError as e:
                     # Handle the error, such as logging it or re-raising it with additional context
-                    logging.Logger.error(f"Failed to register subcommand: {e}")
+                    self.logging.error(f"Failed to register subcommand: {e}")
 
             ```
         """

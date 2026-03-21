@@ -144,7 +144,7 @@ class ChatApp:
 
         Args:
             model_name (str | None): The name of the current model being used in the conversation.
-            current_session_title (str | None): The title of the current conversation session.
+            session_title (str | None): The title of the current conversation session.
         """
         info_parts: list[str] = []
         if model_name:
