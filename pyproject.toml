@@ -18,7 +18,10 @@ dependencies = [
     "rich",
     "prompt_toolkit",
     "python-dotenv",
-    "platformdirs"
+    "platformdirs",
+    "typing-extensions",
+    "jsonschema",
+    "pytest"
 ]
 
 [project.urls]
@@ -26,6 +29,3 @@ Homepage = "https://github.com/wolf0023/genai-cli"
 
 [project.scripts]
 genai-cli = "genai_cli.app:main"
-
-[tool.setuptools]
-py-modules = ["genai_cli"]
