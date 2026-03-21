@@ -100,8 +100,9 @@ class LLMChat:
         assert isinstance(response, ModelResponse)
 
         # Log token usage information if available
-        self.logger.info(f"Prompt tokens: {response.usage.get('prompt_tokens', 'N/A')}")
-        self.logger.info(f"Completion tokens: {response.usage.get('completion_tokens', 'N/A')}")
+        if hasattr(response, "usage") and response.usage is not None:
+            self.logger.info(f"Prompt tokens: {response.usage.get('prompt_tokens', 'N/A')}")
+            self.logger.info(f"Completion tokens: {response.usage.get('completion_tokens', 'N/A')}")
 
         # Get the first choice from the response
         choice: Choices|StreamingChoices = response.choices[0]
