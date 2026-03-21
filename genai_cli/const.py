@@ -1,8 +1,9 @@
+from platformdirs import user_config_dir, user_data_dir
 # Constants for genai-cli
 
-CONFIG_DIR = "~/.config/genai-cli"
-HISTORY_DIR = "~/.local/share/genai-cli/history"
-LOG_DIR = "~/.local/share/genai-cli/logs"
+CONFIG_DIR = user_config_dir("genai-cli")
+HISTORY_DIR = user_data_dir("genai-cli") + "/history"
+LOG_DIR = user_data_dir("genai-cli") + "/logs"
 
 # File names
 MODELS_FILE = "models.json"
