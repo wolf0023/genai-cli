@@ -13,6 +13,7 @@ from prompt_toolkit.enums import EditingMode
 from prompt_toolkit.completion import Completer
 from typing import Callable
 from rich.console import Console
+from rich.markdown import Markdown
 from rich.markup import escape
 from asyncio import create_task, sleep
 from collections.abc import Coroutine
@@ -196,6 +197,19 @@ class ChatUI:
         else:
             self.console.print(message + "\n")
 
+    def _print_markdown(self, markdown_message: str):
+        """Print a markdown-formatted message to the terminal using the Rich Markdown parser.
+
+        Args:
+            markdown_message (str): The markdown-formatted message to print.
+        """
+        if self.app.is_running:
+            run_in_terminal(lambda: self.console.print(Markdown(markdown_message)))
+            run_in_terminal(lambda: self.console.print(""))
+        else:
+            self.console.print(Markdown(markdown_message))
+            self.console.print("")
+
     def print_conversation(self, message: str, role: Role):
         """Print a conversation message to the output field with appropriate formatting based on the role (user or assistant).
 
@@ -208,7 +222,7 @@ class ChatUI:
             case Role.USER:
                 self._print(f"[bright_black]> [/bright_black][bold blue]{message}[/bold blue]")
             case Role.ASSISTANT:
-                self._print(f"{message}")
+                self._print_markdown(f"{message}")
             case _:
                 self._print(f"{message}")
 
