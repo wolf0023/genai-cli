@@ -17,3 +17,4 @@ LOG_TIME_FORMAT = "%Y-%m-%d_%H-%M-%S"
 TITLE_MAX_LENGTH = 30
 COMMAND_PREFIX = "/"
 DEFAULT_SESSION_TITLE = "New Conversation"
+SCROLL_AMOUNT = 3 # Number of lines to scroll

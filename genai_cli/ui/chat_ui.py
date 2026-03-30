@@ -1,6 +1,6 @@
 from prompt_toolkit.application import Application
-from prompt_toolkit.application import run_in_terminal
 from prompt_toolkit.buffer import Buffer
+from prompt_toolkit.formatted_text.ansi import ANSI
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.key_binding.vi_state import InputMode
 from prompt_toolkit.layout.containers import HSplit, VSplit, Window
@@ -11,41 +11,56 @@ from prompt_toolkit.formatted_text import FormattedText
 from prompt_toolkit.widgets import TextArea
 from prompt_toolkit.enums import EditingMode
 from prompt_toolkit.completion import Completer
+from prompt_toolkit.data_structures import Point
 from typing import Callable
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.markup import escape
+from rich import print
 from asyncio import create_task, sleep
 from collections.abc import Coroutine
+from io import StringIO
+from dataclasses import dataclass
 
 from genai_cli.ui.style import STYLE
 from genai_cli.enums import Role
 from genai_cli.core.session import Message
+from genai_cli.const import SCROLL_AMOUNT
 
 welcome_message = "\n".join([
-    "",
     "[bold blue]____ ____ _  _ ____ _    ____ _    _[/bold blue]",
     "[bold blue]| __ |___ |\\ | |__| | __ |    |    |[/bold blue]",
     "[bold blue]|__] |___ | \\| |  | |    |___ |___ |[/bold blue]",
     "",
     "Welcome to GenAI CLI!",
     "Type /help for a list of available commands.",
-    ""
 ])
 
 exit_message = "\n".join([
-    "",
     "[bold red]Thank you for using GenAI CLI![/bold red]",
     "[bold red]Goodbye![/bold red]",
-    ""
 ])
 
 spinner_frames = ["-", "\\", "|", "/"]
+
+@dataclass
+class ChatLine:
+    """Represents a line in the chat log, which may contain markdown content.
+
+    Attributes:
+        content (str): The content of the chat line, which can be plain text or markdown-formatted text.
+        is_markdown (bool): A flag indicating whether the content should be treated as markdown.
+    """
+    content: str
+    is_markdown: bool = False
 
 class ChatUI:
     """GenAI CLI Chat UI built with prompt_toolkit.
 
     Attributes:
+        chat_log (list[ChatLine]): A list to store any output messages that should be displayed in the output field.
+        output_cursor_line (int): An integer to track the current line position of the cursor in the output field for scrolling purposes.
+        output_field (Window): A scrollable window that displays the conversation history and any output messages.
         input_field (TextArea): Allows the user to type their messages and commands.
         waiting_message_field (Window): Displays a waiting indicator spinner when the application is in a waiting state (e.g., waiting for a response from the model).
         vi_mode_field (Window): Displays the current Vi mode (e.g., NORMAL, INSERT, REPLACE) in a fixed-width area.
@@ -71,11 +86,21 @@ class ChatUI:
             completer (Completer): A prompt_toolkit Completer for providing command completions in the input field.
             on_submit (Callable[[str], Coroutine]): A callback function that is called when the user submits input, receiving the input string as an argument.
         """
-        # Initialize the input field for user messages and commands, and the info field for displaying the current Vi mode and additional information.
+        self.chat_log: list[ChatLine] = []
+        self.output_cursor_line = 0
+        self.output_field = Window(
+            content=FormattedTextControl(
+                text=self._repaint_output,
+                show_cursor=False,
+                get_cursor_position=lambda: Point(0, self.output_cursor_line)
+            ),
+            wrap_lines=True,
+            always_hide_cursor=True,
+        )
         self.input_field = TextArea(
             style="class:input-field",
             dont_extend_height=True,
-            prompt="> ",
+            prompt="",
             multiline=True,
             completer=completer,
             complete_while_typing=True,
@@ -111,9 +136,16 @@ class ChatUI:
         )
 
         self.input_container = HSplit([
+            self.output_field,
             self.waiting_indicator_field,
             Window(height=1, char="─", style="class:separator"),
-            self.input_field,
+            VSplit([
+                Window(
+                    content=FormattedTextControl("> "),
+                    width=2
+                ),
+                self.input_field,
+            ]),
             Window(height=1, char="─", style="class:separator"),
             VSplit([
                 self.vi_mode_field,
@@ -125,14 +157,39 @@ class ChatUI:
 
         # Set up key bindings for the application.
         self.bindings = KeyBindings()
-        self.bindings.add("c-c")(lambda event: self.exit_app())
+
+        @self.bindings.add("c-c")
+        def _(event):
+            """Handle the Ctrl+C key binding to exit the application gracefully."""
+            self.exit_app()
+
+        @self.bindings.add("c-u")
+        def _(event):
+            info = self.output_field.render_info
+            if info is not None:
+                self.output_cursor_line = max(0, info.vertical_scroll - SCROLL_AMOUNT)
+            else:
+                self.output_cursor_line = max(0, self.output_cursor_line - SCROLL_AMOUNT)
+
+            # Clamp the cursor line to ensure it stays within the valid range of lines in the output field after scrolling up.
+            self._clamp_cursor()
+
+        @self.bindings.add("c-d")
+        def _(event):
+            max_line = self._max_cursor_line()
+            info = self.output_field.render_info
+            if info is not None:
+                bottom_line = info.vertical_scroll + info.window_height - 1
+                self.output_cursor_line = min(max_line, bottom_line + SCROLL_AMOUNT)
+            else:
+                self.output_cursor_line = min(max_line, self.output_cursor_line + SCROLL_AMOUNT)
+
+            # Clamp the cursor line to ensure it stays within the valid range of lines in the output field after scrolling down.
+            self._clamp_cursor()
 
         # Store the on_submit callback function for handling user input when the Enter key is pressed.
         self.on_submit = on_submit
         self.input_field.accept_handler = self._accept_input
-
-        # Initialize a Rich Console for printing formatted output to the terminal.
-        self.console = Console()
 
         # Initialize state variables for managing the waiting indicator spinner.
         self.is_waiting = False
@@ -147,13 +204,26 @@ class ChatUI:
             ),
             key_bindings=self.bindings,
             style=STYLE,
-            full_screen=False,
+            full_screen=True,
             editing_mode=EditingMode.VI,
         )
 
-    def _accept_input(self, buffer: Buffer):
-        """Handle user input when the Enter key is pressed. Args: buffer (Buffer): The input buffer containing the user's message.
+    def _repaint_output(self) -> ANSI:
+        """Repaint the output field by converting the chat log messages to ANSI format and returning them as a single ANSI string for display.
+
+        Returns:
+            ANSI: An ANSI-formatted string containing all the messages in the chat log, ready to be displayed in the output field.
+
+        Notes:
+            The cursor line is clamped when repainting.
         """
+        output_messages = "\n".join(self._convert_rich_messages_to_ansi())
+        self._clamp_cursor()
+        return ANSI(output_messages)
+
+
+    def _accept_input(self, buffer: Buffer):
+        """Handle user input when the Enter key is pressed. Args: buffer (Buffer): The input buffer containing the user's message."""
         user_input = buffer.text.strip()
 
         if user_input:
@@ -185,30 +255,74 @@ class ChatUI:
             i += 1
             await sleep(0.1)
 
+    def _max_cursor_line(self) -> int:
+        """Calculate the maximum cursor line based on the number of lines in the output field.
+
+        Returns:
+            int: The maximum cursor line number.
+        """
+        return max(0, len("\n".join(self._convert_rich_messages_to_ansi()).splitlines()) - 1)
+
+    def _clamp_cursor(self):
+        """Clamp the outpur cursor line to ensure it stays within the valid range of lines in the output field, preventing scrolling beyond the available content.
+        """
+        self.output_cursor_line = min(max(0, self.output_cursor_line), self._max_cursor_line())
+
+    def _convert_rich_messages_to_ansi(self) -> list[str]:
+        """Convert the messages in the chat log, which may contain Rich-formatted text, into ANSI-formatted strings for display in the output field.
+
+        Returns:
+            list[str]: A list of ANSI-formatted strings.
+        """
+        ansi_messages = []
+        for message in self.chat_log:
+            buf = StringIO()
+
+            if message.is_markdown:
+                message_content = Markdown(message.content)
+            else:
+                message_content = message.content
+
+            Console(file=buf, force_terminal=True).print(message_content)
+            ansi_messages.append(buf.getvalue())
+
+        return ansi_messages
+
+    def _scroll_to_bottom(self):
+        """Scroll the output field to the bottom to show the most recent messages.
+
+        Notes:
+            A repaint trigger is sent after this method is called to ensure that the output field updates its display to reflect the new scroll position.
+        """
+        self.output_cursor_line = self._max_cursor_line()
+        self.app.invalidate()
+
     def _print(self, message: str):
-        """Print a message to the terminal, ensuring that it is displayed correctly whether the prompt_toolkit application is running or not.
+        """Print a message to the output field. If the application is not running, print to the stardard output instead.
 
         Args:
             message (str): The message to print.
 
         """
         if self.app.is_running:
-            run_in_terminal(lambda: self.console.print(message + "\n"))
+            self.chat_log.append(ChatLine(content=message))
+            # Scroll to the bottom after printing a message.
+            self._scroll_to_bottom()
         else:
-            self.console.print(message + "\n")
+            print(message)
 
     def _print_markdown(self, markdown_message: str):
-        """Print a markdown-formatted message to the terminal using the Rich Markdown parser.
+        """Print a markdown-formatted message to the output field. If the application is not running, print to the standard output instead.
 
         Args:
             markdown_message (str): The markdown-formatted message to print.
         """
         if self.app.is_running:
-            run_in_terminal(lambda: self.console.print(Markdown(markdown_message)))
-            run_in_terminal(lambda: self.console.print(""))
+            self.chat_log.append(ChatLine(content=markdown_message, is_markdown=True))
+            # Scroll to the bottom after printing a markdown message.
+            self._scroll_to_bottom()
         else:
-            self.console.print(Markdown(markdown_message))
-            self.console.print("")
+            print(Markdown(markdown_message))
 
     def print_conversation(self, message: str, role: Role):
         """Print a conversation message to the output field with appropriate formatting based on the role (user or assistant).
@@ -220,7 +334,7 @@ class ChatUI:
         message = escape(message)
         match role:
             case Role.USER:
-                self._print(f"[bright_black]> [/bright_black][bold blue]{message}[/bold blue]")
+                self._print(f"[bold blue]{message}[/bold blue]")
             case Role.ASSISTANT:
                 self._print_markdown(f"{message}")
             case _:
@@ -333,6 +447,8 @@ class ChatUI:
                 self.update_info(info_message)
             if status_message is not None:
                 self.update_status_bar(status_message)
+
+            self.print_welcome()
 
         self.app.run(pre_run=pre_run)
 

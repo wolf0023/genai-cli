@@ -358,7 +358,6 @@ class ChatApp:
         """ Start an interactive chat session with the AI assistant.
         """
         self.logger.info("Starting chat application.")
-        self.ui.print_welcome()
 
         # Load new session on start
         self.logger.info("New chat session created.")
