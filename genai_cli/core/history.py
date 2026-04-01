@@ -85,7 +85,7 @@ class HistoryStorage:
             Exception: If there is an error creating the history file.
         """
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"history_{timestamp}.json"
+        filename = os.path.basename(f"history_{timestamp}.json")
         history_path = os.path.join(self._history_path, filename)
 
         try:
@@ -154,7 +154,7 @@ class HistoryStorage:
                 json.dump(session_data.to_dict(), f, ensure_ascii=False, indent=4)
         except Exception as e:
             self._logger.error(f"Error saving history file {session_data.filename}: {str(e)}")
-            raise Exception(f"Failed to save history file: {str(e)}")
+            raise Exception(f"Failed to save history file: {str(e)}") from e
 
         # Update history files list after saving the history file
         self._load_history_files()
