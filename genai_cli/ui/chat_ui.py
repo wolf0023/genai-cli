@@ -13,14 +13,14 @@ from prompt_toolkit.enums import EditingMode
 from prompt_toolkit.completion import Completer
 from prompt_toolkit.data_structures import Point
 from typing import Callable
+from rich import print
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.markup import escape
-from rich import print
 from asyncio import create_task, sleep
 from collections.abc import Coroutine
-from io import StringIO
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from shutil import get_terminal_size
 
 from genai_cli.ui.style import STYLE
 from genai_cli.enums import Role
@@ -44,21 +44,36 @@ exit_message = "\n".join([
 spinner_frames = ["-", "\\", "|", "/"]
 
 @dataclass
-class ChatLine:
-    """Represents a line in the chat log, which may contain markdown content.
+class ChatMessage:
+    """Represents a message in the chat log, which can be either plain text or markdown-formatted content.
 
     Attributes:
-        content (str): The content of the chat line, which can be plain text or markdown-formatted text.
-        is_markdown (bool): A flag indicating whether the content should be treated as markdown.
+        content (str): The content of the message, which can be plain text or markdown-formatted text.
+        is_markdown (bool): A flag indicating whether the content is markdown-formatted.
     """
     content: str
     is_markdown: bool = False
+
+@dataclass
+class ChatUICache:
+    """A cache class to store the chat log and other relevant information for the ChatUI.
+
+    Attributes:
+        chat_log (list[ChatMessage]): A list of ChatMessage objects representing any output messages that should be displayed in the output field.
+        ansi_cache (list[str]): A list of ANSI-formatted strings that can be used to cache the converted output messages for efficient repainting of the output field.
+        terminal_width (int): An integer to store the current width of the terminal. This is used to check whether the width has been changed.
+        total_lines (int): An integer to store the total number of ansi lines in the output field. This is used to ensure the cursor line is clamped correctly when the terminal width changes or when new messages are printed, preventing scrolling beyond the available content.
+    """
+    chat_log: list[ChatMessage] = field(default_factory=list)
+    ansi_cache: list[str] = field(default_factory=list)
+    terminal_width: int = 0
+    total_lines: int = 0
 
 class ChatUI:
     """GenAI CLI Chat UI built with prompt_toolkit.
 
     Attributes:
-        chat_log (list[ChatLine]): A list to store any output messages that should be displayed in the output field.
+        ui_cache (ChatUICache): An instance of ChatUICache to store the chat log and other relevant information for the ChatUI.
         output_cursor_line (int): An integer to track the current line position of the cursor in the output field for scrolling purposes.
         output_field (Window): A scrollable window that displays the conversation history and any output messages.
         input_field (TextArea): Allows the user to type their messages and commands.
@@ -69,7 +84,7 @@ class ChatUI:
         input_container (HSplit): A container that organizes the input field and info field vertically, separated by horizontal lines.
         on_submit (Callable[[str], Coroutine]): A callback function that is called when the user submits input, receiving the input string as an argument.
         bindings (KeyBindings): Defines key bindings for user interactions (e.g., submitting input, exiting the app).
-        console (Console): A Rich Console instance for printing formatted output to the terminal.
+        console (Console): A Rich Console instance used for converting messages to ANSI format for display in the output field.
         is_waiting (bool): A flag indicating whether the application is currently in a waiting state.
         spinner_index (int): An index to track the current frame of the waiting indicator spinner.
         waiting_message (str): An optional message to display alongside the waiting indicator spinner.
@@ -86,11 +101,11 @@ class ChatUI:
             completer (Completer): A prompt_toolkit Completer for providing command completions in the input field.
             on_submit (Callable[[str], Coroutine]): A callback function that is called when the user submits input, receiving the input string as an argument.
         """
-        self.chat_log: list[ChatLine] = []
+        self.ui_cache = ChatUICache()
         self.output_cursor_line = 0
         self.output_field = Window(
             content=FormattedTextControl(
-                text=self._repaint_output,
+                text=self._get_output_text,
                 show_cursor=False,
                 get_cursor_position=lambda: Point(0, self.output_cursor_line)
             ),
@@ -187,6 +202,9 @@ class ChatUI:
             # Clamp the cursor line to ensure it stays within the valid range of lines in the output field after scrolling down.
             self._clamp_cursor()
 
+        # Initialize a Rich Console instance for converting messages to ANSI format for display in the output field.
+        self.console = Console(force_terminal=True)
+
         # Store the on_submit callback function for handling user input when the Enter key is pressed.
         self.on_submit = on_submit
         self.input_field.accept_handler = self._accept_input
@@ -208,19 +226,48 @@ class ChatUI:
             editing_mode=EditingMode.VI,
         )
 
-    def _repaint_output(self) -> ANSI:
-        """Repaint the output field by converting the chat log messages to ANSI format and returning them as a single ANSI string for display.
+    def _get_output_text(self) -> ANSI:
+        """Get the current output text in ANSI format for display in the output field by joining the cached ANSI messages."
 
-        Returns:
-            ANSI: An ANSI-formatted string containing all the messages in the chat log, ready to be displayed in the output field.
+        Return:
+            ANSI: The current output text in ANSI format for display in the output field.
+        """
+        self._repaint_output()
+        return ANSI("\n".join(self.ui_cache.ansi_cache))
+
+    def _repaint_output(
+        self,
+        force: bool = False
+    ):
+        """Repaint the output field by converting the cached chat log messages to ANSI format and joining them into a single string for display.
+
+        Args:
+            force (bool): A flag indicating whether to force a repaint by converting the chat log messages.
 
         Notes:
             The cursor line is clamped when repainting.
         """
-        output_messages = "\n".join(self._convert_rich_messages_to_ansi())
-        self._clamp_cursor()
-        return ANSI(output_messages)
+        terminal_width = get_terminal_size().columns
 
+        # If the terminal width has not changed since the last repaint and force is not set to True, we can skip the conversion and just update the total lines for cursor clamping.
+        if not force and terminal_width == self.ui_cache.terminal_width:
+            self.ui_cache.total_lines = len("\n".join(self.ui_cache.ansi_cache).splitlines())
+
+            # Clamp the cursor line.
+            self._clamp_cursor()
+
+            return
+
+        # Convert the chat log messages to ANSI format and cache the results and the terminal width for future repaints.
+        ansi_messages = self._convert_rich_messages_to_ansi(self.ui_cache.chat_log)
+        self.ui_cache.terminal_width = terminal_width
+        self.ui_cache.ansi_cache = ansi_messages
+
+        # Join the ANSI messages into a single string and update the total lines in the output for cursor clamping.
+        self.ui_cache.total_lines = len("\n".join(ansi_messages).splitlines())
+
+        # Clamp the cursor line.
+        self._clamp_cursor()
 
     def _accept_input(self, buffer: Buffer):
         """Handle user input when the Enter key is pressed. Args: buffer (Buffer): The input buffer containing the user's message."""
@@ -256,37 +303,50 @@ class ChatUI:
             await sleep(0.1)
 
     def _max_cursor_line(self) -> int:
-        """Calculate the maximum cursor line based on the number of lines in the output field.
+        """Return the maximum cursor line number based on the total number of lines in the output field.
 
         Returns:
             int: The maximum cursor line number.
         """
-        return max(0, len("\n".join(self._convert_rich_messages_to_ansi()).splitlines()) - 1)
+        return max(0, self.ui_cache.total_lines - 1)
 
     def _clamp_cursor(self):
-        """Clamp the outpur cursor line to ensure it stays within the valid range of lines in the output field, preventing scrolling beyond the available content.
+        """Clamp the output cursor line to ensure it stays within the valid range of lines in the output field, preventing scrolling beyond the available content.
         """
         self.output_cursor_line = min(max(0, self.output_cursor_line), self._max_cursor_line())
 
-    def _convert_rich_messages_to_ansi(self) -> list[str]:
-        """Convert the messages in the chat log, which may contain Rich-formatted text, into ANSI-formatted strings for display in the output field.
+    def convert_rich_message_to_ansi(
+        self,
+        message: str,
+        is_markdown: bool = False
+    ) -> str:
+        """Convert a single message (either plain text or markdown-formatted) to an ANSI-formatted string using Rich's Console.
 
         Returns:
-            list[str]: A list of ANSI-formatted strings.
+            str: An ANSI-formatted string.
         """
-        ansi_messages = []
-        for message in self.chat_log:
-            buf = StringIO()
+        if is_markdown:
+            message_content = Markdown(message)
+        else:
+            message_content = message
 
-            if message.is_markdown:
-                message_content = Markdown(message.content)
-            else:
-                message_content = message.content
+        with self.console.capture() as capture:
+            self.console.print(message_content)
+        return capture.get()
 
-            Console(file=buf, force_terminal=True).print(message_content)
-            ansi_messages.append(buf.getvalue())
+    def _convert_rich_messages_to_ansi(
+        self,
+        messages: list[ChatMessage]
+    ) -> list[str]:
+        """Convert a list of messages (either plain text or markdown-formatted) to a list of ANSI-formatted strings using Rich's Console.
 
-        return ansi_messages
+        Args:
+            messages (list[ChatMessage]): A list of ChatMessage objects to be converted.
+
+        Returns:
+            list[str]: A list of ANSI-formatted strings corresponding to the input messages.
+        """
+        return [self.convert_rich_message_to_ansi(message.content, message.is_markdown) for message in messages]
 
     def _scroll_to_bottom(self):
         """Scroll the output field to the bottom to show the most recent messages.
@@ -297,32 +357,30 @@ class ChatUI:
         self.output_cursor_line = self._max_cursor_line()
         self.app.invalidate()
 
-    def _print(self, message: str):
-        """Print a message to the output field. If the application is not running, print to the stardard output instead.
+    def print_message(
+        self,
+        message: str,
+        is_markdown: bool = False
+    ):
+        """Print a message to the output field, converting it to ANSI format for display. If the application is not running, print directly to the terminal.
 
         Args:
-            message (str): The message to print.
-
+            message (str): The message content to be printed, which can be either plain text or markdown-formatted text.
+            is_markdown (bool): A flag indicating whether the message content is markdown-formatted.
         """
         if self.app.is_running:
-            self.chat_log.append(ChatLine(content=message))
+            # Append the message to the chat log cache and convert it to ANSI format for display in the output field.
+            self.ui_cache.chat_log.append(ChatMessage(content=message, is_markdown=is_markdown))
+            self.ui_cache.ansi_cache.append(self.convert_rich_message_to_ansi(message=message, is_markdown=is_markdown))
+
+            # Trigger a repaint to update the output field with the new message.
+            self._repaint_output(force=True)
+
             # Scroll to the bottom after printing a message.
             self._scroll_to_bottom()
         else:
-            print(message)
-
-    def _print_markdown(self, markdown_message: str):
-        """Print a markdown-formatted message to the output field. If the application is not running, print to the standard output instead.
-
-        Args:
-            markdown_message (str): The markdown-formatted message to print.
-        """
-        if self.app.is_running:
-            self.chat_log.append(ChatLine(content=markdown_message, is_markdown=True))
-            # Scroll to the bottom after printing a markdown message.
-            self._scroll_to_bottom()
-        else:
-            print(Markdown(markdown_message))
+            # If the app is not running, we can print directly to the terminal whthout using the prompt_toolkit output field.
+            print(message if not is_markdown else Markdown(message))
 
     def print_conversation(self, message: str, role: Role):
         """Print a conversation message to the output field with appropriate formatting based on the role (user or assistant).
@@ -334,11 +392,11 @@ class ChatUI:
         message = escape(message)
         match role:
             case Role.USER:
-                self._print(f"[bold blue]{message}[/bold blue]")
+                self.print_message(f"[bold blue]{message}[/bold blue]")
             case Role.ASSISTANT:
-                self._print_markdown(f"{message}")
+                self.print_message(f"{message}", is_markdown=True)
             case _:
-                self._print(f"{message}")
+                self.print_message(f"{message}")
 
     def print_error(self, error_message: str):
         """Print an error message to the output field with error formatting.
@@ -346,7 +404,7 @@ class ChatUI:
         Args:
             error_message (str): The error message.
         """
-        self._print(f"[bold red]Error: [/bold red]{error_message}")
+        self.print_message(f"[bold red]Error: [/bold red]{error_message}")
 
     def print_command_output(
         self,
@@ -360,8 +418,8 @@ class ChatUI:
             command_output (str): The output from a command.
         """
         command_prompt = escape(command_prompt)
-        self._print(f"[on bright_black] [yellow]{command_prompt}[/yellow] [/on bright_black][bright_black][/bright_black]")
-        self._print(command_output)
+        self.print_message(f"[on bright_black] [yellow]{command_prompt}[/yellow] [/on bright_black][bright_black][/bright_black]")
+        self.print_message(command_output)
 
     def print_histories(self, histories: list[Message]):
         """Print a list of conversation histories to the output field, formatting each message based on its role.
@@ -403,11 +461,11 @@ class ChatUI:
 
     def print_welcome(self):
         """Print the welcome message to the terminal when the application starts."""
-        self._print(welcome_message)
+        self.print_message(welcome_message)
 
     def print_exit(self):
         """Print the exit message to the terminal when the application is exiting."""
-        self._print(exit_message)
+        print(exit_message)
 
     def start_waiting_indicator(
         self,
@@ -418,10 +476,11 @@ class ChatUI:
         Args:
             waiting_message (str): An optional message to display alongside the waiting indicator spinner.
         """
-        self.waiting_message = waiting_message
-        self.is_waiting = True
+        if not self.is_waiting:
+            self.waiting_message = waiting_message
+            self.is_waiting = True
 
-        create_task(self._animate_waiting_indicator())
+            create_task(self._animate_waiting_indicator())
 
     def stop_waiting_indicator(self):
         """Stop the waiting indicator spinner and clear any waiting message."""
