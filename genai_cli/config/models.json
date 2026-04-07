@@ -1,32 +1,12 @@
 {
     "models": {
         "gemini_pro": {
-            "model_id": "gemini/gemini-3-pro-preview",
-            "thinking": true
+            "model_id": "gemini/gemini-3.1-pro-preview",
+            "thinking": "medium"
         },
         "gemini_flash": {
             "model_id": "gemini/gemini-3-flash-preview",
-            "thinking": true
-        },
-        "claude_haiku": {
-            "model_id": "claude-haiku-4-5-20251001",
-            "thinking": true
-        },
-        "claude_sonnet": {
-            "model_id": "claude-sonnet-4-5-20250929",
-            "thinking": true
-        },
-        "claude_opus": {
-            "model_id": "claude-opus-4-5-20251101",
-            "thinking": false
-        },
-        "gpt": {
-            "model_id": "gpt-5.2",
-            "thinking": false
-        },
-        "gpt_mini": {
-            "model_id": "gpt-5-mini",
-            "thinking": false
+            "thinking": "high"
         }
     }
 }

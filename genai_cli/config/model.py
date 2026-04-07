@@ -3,9 +3,27 @@ import os
 import json
 import shutil
 from jsonschema import validate, ValidationError
+from enum import StrEnum
 
 from genai_cli.const import CONFIG_DIR, MODELS_FILE
 from genai_cli.config.model_schema import SCHEMA
+
+class ThinkingLevel(StrEnum):
+    """Enum for thinking levels.
+    Attributes:
+        NONE: No thinking mode.
+        LOW: Low thinking mode.
+        MEDIUM: Medium thinking mode.
+        HIGH: High thinking mode.
+    """
+    NONE = "none"
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+
+    @classmethod
+    def _missing_(cls, value: object) -> 'ThinkingLevel':
+        return cls.NONE
 
 @dataclass
 class Model:
@@ -13,11 +31,11 @@ class Model:
     Attributes:
         model_name (str): Name of the model.
         model_id (str): Identifier of the model.
-        thinking (bool): Whether use thinking mode. (if applicable)
+        thinking (ThinkingLevel): Thinking level of the model.
     """
     model_name: str
     model_id: str
-    thinking: bool = False
+    thinking: ThinkingLevel
 
 class ModelConfig:
     """ Load models configuration.
@@ -77,7 +95,7 @@ class ModelConfig:
             Model(
                 model_name=name,
                 model_id=model["model_id"],
-                thinking=model["thinking"]
+                thinking=ThinkingLevel(model["thinking"])
             )
             for name, model in models_data["models"].items()
         ]

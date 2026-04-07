@@ -1,8 +1,9 @@
-from litellm import acompletion, ModelResponse, CustomStreamWrapper, Choices, StreamingChoices
+from litellm import acompletion, ModelResponse, CustomStreamWrapper, Choices, StreamingChoices, supports_reasoning
 from datetime import datetime
 
 from genai_cli.enums import Role
 from genai_cli.core.session import Message
+from genai_cli.config.model import ThinkingLevel
 
 class LLMChat:
     """ A class to handle interactions with the LLM model for chat-based conversations. 
@@ -68,7 +69,7 @@ class LLMChat:
         system_prompt: str,
         user_prompt: str,
         history: list[Message],
-        thinking: bool = False
+        thinking: ThinkingLevel,
     ) -> str:
         """ Get a chat response from the LLM model.
             Args:
@@ -76,11 +77,12 @@ class LLMChat:
                 system_prompt: The system prompt to set the context.
                 user_prompt: The user's prompt.
                 history: The conversation history as a list of Message objects.
-                thinking: Whether to use thinking mode (if applicable).
+                thinking: The thinking level for the model. If the model does not support thinking modes, this will be treated as 'none'.
             Returns:
                 The LLM's response as a string.
         """
         messages: list[dict[str, str]] = [self.get_sendable_format(msg) for msg in history]
+        thinking_level: str = thinking.value if supports_reasoning(model) else "none"
 
         # Add the system prompt to the messages if provided
         if system_prompt:
@@ -93,7 +95,7 @@ class LLMChat:
         response: ModelResponse|CustomStreamWrapper = await acompletion(
             model=model, 
             messages=messages,
-            reasoning_effort="medium" if thinking else None
+            reasoning_effort=thinking_level
         )
 
         # Avoid 'Attribute "choices" is unknown'

@@ -13,11 +13,11 @@ SCHEMA = {
                         "description": "The identifier for the model, used to specify which model to use for generating responses."
                     },
                     "thinking": {
-                        "type": "boolean",
-                        "description": "Indicates whether the model supports 'thinking' features, which may include advanced reasoning capabilities."
+                        "type": "string",
+                        "description": "The thinking level for the model, which can be set to 'none', 'low', 'medium', or 'high'. If the model does not support thinking modes, this field will be treated as 'none'."
                     }
                 },
-            "required": ["model_id", "thinking"]
+            "required": ["model_id"]
             }
         }
     },
