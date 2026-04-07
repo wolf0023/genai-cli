@@ -25,6 +25,14 @@ from genai_cli.command.base import CommandError, ExitError
 from genai_cli.const import TITLE_MAX_LENGTH
 from genai_cli.const import DEFAULT_SESSION_TITLE
 
+class ModelNotFoundError(Exception):
+    """Exception raised when a requested model is not found in the configuration."""
+    pass
+
+class SessionNotFoundError(Exception):
+    """Exception raised when there is no active session."""
+    pass
+
 class ChatApp:
     """ Chat application class for managing the chat UI.
     Attributes:
@@ -237,7 +245,7 @@ class ChatApp:
             # Check if there is an active session before processing the LLM response.
             if self.session_manager.current_session is None:
                 self.logger.error("No active session found when processing LLM response.")
-                raise Exception("No active session found. Please create or load a session before sending messages.")
+                raise SessionNotFoundError("No active session found. Please create or load a session before sending messages.")
 
             # Get current session history
             history = self.session_manager.current_session.messages
@@ -252,7 +260,7 @@ class ChatApp:
 
             # Check if model configuration is found
             if model is None:
-                raise Exception(f"Model '{self.session_manager.current_session.model}' not found.")
+                raise ModelNotFoundError(f"Model '{self.session_manager.current_session.model}' not found.")
 
             # Append user input to chat UI before sending request to model, so that user can see their message immediately.
             self.ui.print_conversation(user_input, role=Role.USER)
@@ -305,6 +313,16 @@ class ChatApp:
 
             self.ui.print_error(f"The model \"{model_id}\" is not available or the request was invalid.")
             self.logger.error(f"Error during sending request to model: Bad request - {str(e)}")
+            return True
+
+        except SessionNotFoundError as e:
+            self.ui.print_error(str(e))
+            self.logger.error(f"Error during processing LLM response: {str(e)}")
+            return True
+
+        except ModelNotFoundError as e:
+            self.ui.print_error(str(e))
+            self.logger.error(f"Error during processing LLM response: {str(e)}")
             return True
 
         except Exception as e:
