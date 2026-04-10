@@ -1,4 +1,5 @@
 from datetime import datetime
+from enum import IntEnum
 from litellm.exceptions import AuthenticationError, RateLimitError, BadRequestError
 import dotenv
 from jsonschema import ValidationError
@@ -24,6 +25,11 @@ from genai_cli.command.model_command import ModelCommand
 from genai_cli.command.base import CommandError, ExitError
 from genai_cli.const import TITLE_MAX_LENGTH
 from genai_cli.const import DEFAULT_SESSION_TITLE
+
+class ExitStatus(IntEnum):
+    """Enum representing different exit statuses for the application."""
+    SUCCESS = 0
+    ERROR = 1
 
 class ModelNotFoundError(Exception):
     """Exception raised when a requested model is not found in the configuration."""
@@ -76,6 +82,9 @@ class ChatApp:
 
         # A flag to indicate whether user input is currently blocked (e.g., while processing a command or waiting for an LLM response).
         self.is_input_blocked: bool = False
+
+        # Initialize exit status to SUCCESS by default.
+        self.exit_status: ExitStatus = ExitStatus.SUCCESS
 
     def _load_configurations(self):
         """ Load model and main configurations.
@@ -224,8 +233,8 @@ class ChatApp:
             return False
 
         except Exception as e:
-            self.ui.print_error(f"Unexpected error occurred. Please check the logs for more details.")
             self.logger.error(f"Unexpected error during handling command: {str(e)}", exc_info=True)
+            self.exit_status = ExitStatus.ERROR
             return False
 
     async def _process_llm_response(self, user_input: str) -> bool:
@@ -326,8 +335,8 @@ class ChatApp:
             return True
 
         except Exception as e:
-            self.ui.print_error(f"Unexpected error occurred. Please check the logs for more details.")
             self.logger.error(f"Unexpected error during main loop: {str(e)}", exc_info=True)
+            self.exit_status = ExitStatus.ERROR
             return False
 
     async def handle_user_input(self, user_input: str):
@@ -396,7 +405,13 @@ class ChatApp:
             self.history_storage.save_history(session_data)
             self.logger.info("Chat session ended and history saved.")
 
-        self.ui.print_exit()
+        # Display exit message based on the exit status of the application.
+        if self.exit_status == ExitStatus.SUCCESS:
+            self.logger.info("Chat application exited successfully.")
+            self.ui.print_exit()
+        else:
+            self.logger.error("Chat application exited with errors.")
+            self.ui.print_exit_error()
 
 def main():
     """ Main function to start the chat application."""

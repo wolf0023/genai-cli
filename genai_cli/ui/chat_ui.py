@@ -41,6 +41,11 @@ exit_message = "\n".join([
     "[bold red]Goodbye![/bold red]",
 ])
 
+exit_error_message = "\n".join([
+    "[bold red]An error occurred while running GenAI CLI.[/bold red]",
+    "[bold red]Please check the logs for more details.[/bold red]",
+])
+
 spinner_frames = ["-", "\\", "|", "/"]
 
 @dataclass
@@ -465,7 +470,11 @@ class ChatUI:
 
     def print_exit(self):
         """Print the exit message to the terminal when the application is exiting."""
-        print(exit_message)
+        self.print_message(exit_message)
+
+    def print_exit_error(self):
+        """Print the exit error message to the terminal when the application is exiting due to an error."""
+        self.print_message(exit_error_message)
 
     def start_waiting_indicator(
         self,
@@ -512,7 +521,5 @@ class ChatUI:
         self.app.run(pre_run=pre_run)
 
     def exit_app(self):
-        """Exit the application gracefully by resetting the input container to prevent further input and updates, and then calling the app's exit method."""
-        # Remove input and info fields from the container to prevent further input and updates.
-        self.input_container.children = []
+        """Exit the application gracefully by calling the exit method of the prompt_toolkit Application instance."""
         self.app.exit()
