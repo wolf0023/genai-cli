@@ -58,14 +58,16 @@ The syntax is as follows.
 
 ```json
 {
-    'models': {
-        'Model name within the application': {
-            'model_id': 'Model ID supported by LiteLLM',
-            'thinking': true/false (whether to enable reasoning)
+    "models": {
+        "Model name within the application": {
+            "model_id": "Model ID supported by LiteLLM",
+            "thinking": "low|medium|high|none|null"
         }
     }
 }
 ```
+
+Set `"thinking": null` if the model does not support `reasoning_effort`.
 
 ## Important Notes
 
