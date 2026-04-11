@@ -21,21 +21,21 @@ class ThinkingLevel(StrEnum):
     MEDIUM = "medium"
     HIGH = "high"
 
-    @classmethod
-    def _missing_(cls, value: object) -> 'ThinkingLevel':
-        return cls.NONE
-
 @dataclass
 class Model:
     """ Single model configuration.
+
     Attributes:
         model_name (str): Name of the model.
         model_id (str): Identifier of the model.
-        thinking (ThinkingLevel): Thinking level of the model.
+        thinking (ThinkingLevel | None): Thinking level of the model.
+
+    Notes:
+        If the thinking level is null or not specified, thinking will be set to None.
     """
     model_name: str
     model_id: str
-    thinking: ThinkingLevel
+    thinking: ThinkingLevel | None
 
 class ModelConfig:
     """ Load models configuration.
@@ -91,14 +91,19 @@ class ModelConfig:
             raise ValueError(f"Invalid models configuration: {e.message}")
 
         # Parse models data
-        self.models = [
-            Model(
-                model_name=name,
-                model_id=model["model_id"],
-                thinking=ThinkingLevel(model["thinking"])
+        self.models = []
+        for name, model in models_data["models"].items():
+            thinking_value: str | None = model.get("thinking")
+            thinking_level: ThinkingLevel | None = (
+                ThinkingLevel(thinking_value) if thinking_value is not None else None
             )
-            for name, model in models_data["models"].items()
-        ]
+            self.models.append(
+                Model(
+                    model_name=name,
+                    model_id=model["model_id"],
+                    thinking=thinking_level
+                )
+            )
 
     def get_model_names(self) -> list[str]:
         """ Get the list of model names.

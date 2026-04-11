@@ -13,8 +13,9 @@ SCHEMA = {
                         "description": "The identifier for the model, used to specify which model to use for generating responses."
                     },
                     "thinking": {
-                        "type": "string",
-                        "description": "The thinking level for the model, which can be set to 'none', 'low', 'medium', or 'high'. If the model does not support thinking modes, this field will be treated as 'none'."
+                        "type": ["string", "null"],
+                        "enum": ["none", "low", "medium", "high", None],
+                        "description": "The thinking level for the model. Set null to disable reasoning_effort for models that do not support it."
                     }
                 },
             "required": ["model_id"]
@@ -23,4 +24,3 @@ SCHEMA = {
     },
     "required": ["models"]
 }
-
