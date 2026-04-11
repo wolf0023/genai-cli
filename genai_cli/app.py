@@ -1,6 +1,6 @@
 from datetime import datetime
 from enum import IntEnum
-from litellm.exceptions import AuthenticationError, RateLimitError, BadRequestError
+from litellm.exceptions import AuthenticationError, RateLimitError, BadRequestError, UnsupportedParamsError
 import dotenv
 from jsonschema import ValidationError
 
@@ -306,6 +306,16 @@ class ChatApp:
 
             return True
 
+        except SessionNotFoundError as e:
+            self.ui.print_error(str(e))
+            self.logger.error(f"Error during processing LLM response: {str(e)}")
+            return True
+
+        except ModelNotFoundError as e:
+            self.ui.print_error(str(e))
+            self.logger.error(f"Error during processing LLM response: {str(e)}")
+            return True
+
         except AuthenticationError:
             self.ui.print_error("Invalid API key or credentials.")
             self.logger.error("Error during sending request to model: Authentication failed.")
@@ -316,22 +326,20 @@ class ChatApp:
             self.logger.error("Error during sending request to model: Rate limit exceeded.")
             return True
 
+        except UnsupportedParamsError as e:
+            model = self.model_config.get_model(self.session_manager.current_session.model)
+            model_id = model.model_id if model is not None else "Unknown Model"
+
+            self.ui.print_error(f"The model \"{model_id}\" does not support reasoning mode.")
+            self.logger.error(f"Error during sending request to model: Unsupported parameters - {str(e)}")
+            return True
+
         except BadRequestError as e:
             model = self.model_config.get_model(self.session_manager.current_session.model)
             model_id = model.model_id if model is not None else "Unknown Model"
 
             self.ui.print_error(f"The model \"{model_id}\" is not available or the request was invalid.")
             self.logger.error(f"Error during sending request to model: Bad request - {str(e)}")
-            return True
-
-        except SessionNotFoundError as e:
-            self.ui.print_error(str(e))
-            self.logger.error(f"Error during processing LLM response: {str(e)}")
-            return True
-
-        except ModelNotFoundError as e:
-            self.ui.print_error(str(e))
-            self.logger.error(f"Error during processing LLM response: {str(e)}")
             return True
 
         except Exception as e:
