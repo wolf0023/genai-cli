@@ -13,7 +13,6 @@ from prompt_toolkit.enums import EditingMode
 from prompt_toolkit.completion import Completer
 from prompt_toolkit.data_structures import Point
 from typing import Callable
-from rich import print
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.markup import escape
@@ -23,27 +22,28 @@ from dataclasses import dataclass, field
 from shutil import get_terminal_size
 
 from genai_cli.ui.style import STYLE
+from genai_cli.ui.style import RICH_THEME
 from genai_cli.enums import Role
 from genai_cli.core.session import Message
 from genai_cli.const import SCROLL_AMOUNT
 
 welcome_message = "\n".join([
-    "[bold blue]____ ____ _  _ ____ _    ____ _    _[/bold blue]",
-    "[bold blue]| __ |___ |\\ | |__| | __ |    |    |[/bold blue]",
-    "[bold blue]|__] |___ | \\| |  | |    |___ |___ |[/bold blue]",
+    "[welcome-logo]____ ____ _  _ ____ _    ____ _    _[/welcome-logo]",
+    "[welcome-logo]| __ |___ |\\ | |__| | __ |    |    |[/welcome-logo]",
+    "[welcome-logo]|__] |___ | \\| |  | |    |___ |___ |[/welcome-logo]",
     "",
-    "Welcome to GenAI CLI!",
-    "Type /help for a list of available commands.",
+    "[welcome-message]Welcome to GenAI CLI![/welcome-message]",
+    "[welcome-message]Type /help for a list of available commands.[/welcome-message]",
 ])
 
 exit_message = "\n".join([
-    "[bold red]Thank you for using GenAI CLI![/bold red]",
-    "[bold red]Goodbye![/bold red]",
+    "[exit-message]Thank you for using GenAI CLI![/exit-message]",
+    "[exit-message]Goodbye![/exit-message]",
 ])
 
 exit_error_message = "\n".join([
-    "[bold red]An error occurred while running GenAI CLI.[/bold red]",
-    "[bold red]Please check the logs for more details.[/bold red]",
+    "[error]An error occurred while running GenAI CLI.[/error]",
+    "[error]Please check the logs for more details.[/error]",
 ])
 
 spinner_frames = ["-", "\\", "|", "/"]
@@ -89,7 +89,8 @@ class ChatUI:
         input_container (HSplit): A container that organizes the input field and info field vertically, separated by horizontal lines.
         on_submit (Callable[[str], Coroutine]): A callback function that is called when the user submits input, receiving the input string as an argument.
         bindings (KeyBindings): Defines key bindings for user interactions (e.g., submitting input, exiting the app).
-        console (Console): A Rich Console instance used for converting messages to ANSI format for display in the output field.
+        render_console (Console): A Rich Console instance used for converting messages to ANSI format for display in the output field.
+        stdout_console (Console): A Rich Console instance used for printing messages directly to the terminal when the app is not running.
         is_waiting (bool): A flag indicating whether the application is currently in a waiting state.
         spinner_index (int): An index to track the current frame of the waiting indicator spinner.
         waiting_message (str): An optional message to display alongside the waiting indicator spinner.
@@ -157,6 +158,7 @@ class ChatUI:
 
         self.input_container = HSplit([
             self.output_field,
+            Window(height=1),
             self.waiting_indicator_field,
             Window(height=1, char="─", style="class:separator"),
             VSplit([
@@ -207,8 +209,9 @@ class ChatUI:
             # Clamp the cursor line to ensure it stays within the valid range of lines in the output field after scrolling down.
             self._clamp_cursor()
 
-        # Initialize a Rich Console instance for converting messages to ANSI format for display in the output field.
-        self.console = Console(force_terminal=True)
+        # Initialize a Rich Console instance for converting messages to ANSI format for display in the output field and for printing directly to the terminal when the app is not running.
+        self.render_console = Console(force_terminal=True, theme=RICH_THEME)
+        self.stdout_console = Console(theme=RICH_THEME)
 
         # Store the on_submit callback function for handling user input when the Enter key is pressed.
         self.on_submit = on_submit
@@ -331,12 +334,12 @@ class ChatUI:
             str: An ANSI-formatted string.
         """
         if is_markdown:
-            message_content = Markdown(message)
+            message_content = Markdown(message, code_theme="ansi_dark")
         else:
             message_content = message
 
-        with self.console.capture() as capture:
-            self.console.print(message_content)
+        with self.render_console.capture() as capture:
+            self.render_console.print(message_content)
         return capture.get()
 
     def _convert_rich_messages_to_ansi(
@@ -385,7 +388,7 @@ class ChatUI:
             self._scroll_to_bottom()
         else:
             # If the app is not running, we can print directly to the terminal whthout using the prompt_toolkit output field.
-            print(message if not is_markdown else Markdown(message))
+            self.stdout_console.print(message if not is_markdown else Markdown(message))
 
     def print_conversation(self, message: str, role: Role):
         """Print a conversation message to the output field with appropriate formatting based on the role (user or assistant).
@@ -397,7 +400,7 @@ class ChatUI:
         message = escape(message)
         match role:
             case Role.USER:
-                self.print_message(f"[bold blue]{message}[/bold blue]")
+                self.print_message(f"[user-input]{message}[/user-input]")
             case Role.ASSISTANT:
                 self.print_message(f"{message}", is_markdown=True)
             case _:
@@ -409,7 +412,7 @@ class ChatUI:
         Args:
             error_message (str): The error message.
         """
-        self.print_message(f"[bold red]Error: [/bold red]{error_message}")
+        self.print_message(f"[error]Error: [/error]{error_message}")
 
     def print_command_output(
         self,
@@ -423,7 +426,7 @@ class ChatUI:
             command_output (str): The output from a command.
         """
         command_prompt = escape(command_prompt)
-        self.print_message(f"[on bright_black] [yellow]{command_prompt}[/yellow] [/on bright_black][bright_black][/bright_black]")
+        self.print_message(f"[command-input]{command_prompt} [/command-input][command-input-decoration][/command-input-decoration]")
         self.print_message(command_output)
 
     def print_histories(self, histories: list[Message]):
