@@ -1,5 +1,6 @@
 from typing_extensions import override
 from typing import Callable
+from rich.markup import escape
 
 from genai_cli.command.base import BaseCommand
 from genai_cli.command.base import CommandError
@@ -9,7 +10,7 @@ class HelpCommand(BaseCommand):
     """
     name = "help"
     description = "Show this help message."
-    usage = "/help \[command]"
+    usage = "/help [command]"
 
     def __init__(
         self,
@@ -37,7 +38,7 @@ class HelpCommand(BaseCommand):
             case 2:
                 if argv[1] in self.get_main_commands_callback():
                     command = self.get_main_commands_callback()[argv[1]]
-                    return f"[bold yellow]Usage:[/bold yellow] {command.usage}"
+                    return f"[command-output]Usage: {escape(command.usage)}[/command-output]"
                 else:
                     raise CommandError(f"Unknown command '/{argv[1]}'. Use '/help' to see all available commands.")
             case _:
@@ -50,10 +51,10 @@ class HelpCommand(BaseCommand):
             str: A formatted help message listing all commands and their descriptions.
         """
         help_message = [
-            f"* {command.usage}: {command.description}"
+            f"[command-list]* [/command-list][command-output]{command.usage}: {command.description}[/command-output]"
             for command in self.get_main_commands_callback().values()
         ]
-        help_message.insert(0, "[bold green]Available commands:[/bold green]")
+        help_message.insert(0, "[command-header]Available commands:[/command-header]")
 
         return "\n".join(help_message)
 

@@ -1,5 +1,6 @@
 from typing_extensions import override
 from typing import Callable
+from rich.markup import escape
 
 from genai_cli.command.base import BaseCommand
 from genai_cli.command.base import CommandError
@@ -12,7 +13,7 @@ class NewCommand(BaseCommand):
     """
     name = "new"
     description = "Create a new conversation with default model"
-    usage = "/new \[title]"
+    usage = "/new [title]"
 
     def __init__(
         self,
@@ -33,7 +34,7 @@ class NewCommand(BaseCommand):
         match argc:
             case 1:
                 self.create_new_session_callback(model=self.default_model)
-                return "[bold green]New conversation created with default model.[/bold green]"
+                return "[command-output]New conversation created with default model.[/command-output]"
             case 2:
                 if len(argv[1]) > TITLE_MAX_LENGTH:
                     raise CommandError(f"Title cannot exceed {TITLE_MAX_LENGTH} characters.")
@@ -41,7 +42,7 @@ class NewCommand(BaseCommand):
                 title = argv[1]
                 self.create_new_session_callback(model=self.default_model, title=title)
 
-                return f"[bold green]New conversation '{title}' created with default model.[/bold green]"
+                return f"[command-output]New conversation '{escape(title)}' created with default model.[/command-output]"
             case _:
                 raise CommandError(f"Too many arguments for the '/{self.name}' command.")
 

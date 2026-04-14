@@ -1,5 +1,6 @@
 from typing_extensions import override
 from typing import Callable
+from rich.markup import escape
 
 from genai_cli.command.base import BaseCommand
 from genai_cli.command.base import CommandError
@@ -30,14 +31,14 @@ class SessionsCommand(BaseCommand):
         """
         if self.get_current_session_callback() is None:
             return [
-                f"\[{index}] {history.title}"
+                f"[command-list]{index}. [/command-list][command-output]{escape(history.title)}[/command-output]"
                 for index, history in enumerate(self.get_histories_callback())
             ]
 
         return [
-            f"[yellow][{index}] {history.title} (current)[/yellow]"
+            f"[command-list]{index}. [/command-list][command-output-emphasis]{escape(history.title)} (current)[/command-output-emphasis]"
             if history.filename == self.get_current_session_callback().filename
-            else f"\[{index}] {history.title}"
+            else f"[command-list]{index}. [/command-list][command-output]{escape(history.title)}[/command-output]"
 
             for index, history in enumerate(self.get_histories_callback())
         ]
@@ -52,13 +53,13 @@ class SessionsCommand(BaseCommand):
         match argc:
             case 1:
                 if not self.get_histories_callback():
-                    return "No conversations found."
+                    return "[command-output]No conversations found.[/command-output]"
 
                 # Format the list of chat histories for display, highlighting the current session if it exists.
                 history_list = self._list_histories()
                 history_list.insert(
                     0,
-                    "[bold green]Conversations:[/bold green]"
+                    "[command-header]Conversations:[/command-header]"
                 )
 
                 return "\n".join(history_list)

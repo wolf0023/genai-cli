@@ -1,5 +1,6 @@
 from typing_extensions import override
 from typing import Callable
+from rich.markup import escape
 
 from genai_cli.command.base import BaseCommand
 from genai_cli.command.base import CommandError
@@ -11,7 +12,7 @@ class SelectCommand(BaseCommand):
     """
     name = "select"
     description = "Select a conversation to continue."
-    usage = "/select \[conversation_id]"
+    usage = "/select [conversation_id]"
 
     def __init__(
         self,
@@ -43,12 +44,12 @@ class SelectCommand(BaseCommand):
 
                     # Check if the selected conversation is already the current session
                     if self.get_current_session_callback().filename == conversation_filename:
-                        return f"[bold yellow]Conversation '{self.get_current_session_callback().title}' is already selected.[/bold yellow]"
+                        raise CommandError(f"Conversation '{self.get_current_session_callback().title}' is already selected.")
 
                     session = self.get_history_callback(conversation_filename)
                     self.load_session_callback(session)
 
-                    return f"[bold green]Conversation '{session.title}' selected.[/bold green]"
+                    return f"[command-output]Conversation '{escape(session.title)}' selected.[/command-output]"
                 except (ValueError, IndexError):
                     raise CommandError("Invalid conversation ID. Please provide a valid integer ID from the conversation list.")
             case _:

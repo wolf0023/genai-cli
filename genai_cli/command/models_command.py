@@ -20,7 +20,7 @@ class ModelsCommand(BaseCommand):
 
     def _list_models(self) -> list[str]:
         return [
-            f"* {model.model_name} ({model.model_id})"   
+            f"[command-list]* [/command-list][command-output]{model.model_name} ({model.model_id})[/command-output]"
             for model in self.models
         ]
 
@@ -31,10 +31,10 @@ class ModelsCommand(BaseCommand):
         match argc:
             case 1:
                 if not self.models:
-                    return "No available models found. To start a chat, you must define the models in the model configuration file."
+                    raise CommandError("No available models found. To start a chat, you must define the models in the model configuration file.")
 
                 formats: list[str] = self._list_models()
-                formats.insert(0, "[bold green]Available models:[/bold green]")
+                formats.insert(0, "[command-header]Available models:[/command-header]")
 
                 return "\n".join(formats)
 

@@ -10,7 +10,7 @@ class ModelCommand(BaseCommand):
     """
     name = "model"
     description = "Change the model for the current session"
-    usage = "/model \[model_name]"
+    usage = "/model [model_name]"
 
     def __init__(
         self,
@@ -27,7 +27,7 @@ class ModelCommand(BaseCommand):
     def get_options(self) -> list[str]:
         """Get the list of available model names.
         This is used for autocompletion when the user types the command.
-    
+
         Returns:
             list[str]: A list of available model names.
         """
@@ -43,16 +43,16 @@ class ModelCommand(BaseCommand):
             case 1:
                 current_model: str|None = self.get_current_model_callback()
                 if current_model is None:
-                    return "[bold yellow]No session is currently loaded.[/bold yellow]"
+                    return "[command-output]No session is currently loaded.[/command-output]"
                 else:
-                    return f"[bold green]Current model: '{current_model}'.[/bold green]"
+                    return f"[command-output]Current model: '{current_model}'.[/command-output]"
             case 2:
                 # Check whether a model exists
                 if argv[1] not in self.model_names:
                     raise CommandError(f"The specified model could not be found.")
 
                 self.change_model_callback(argv[1])
-                return f"[bold green]Model changed to '{argv[1]}'.[/bold green]"
+                return f"[command-output]Model changed to '{argv[1]}'.[/command-output]"
 
             case _:
                 raise CommandError(f"Too many arguments for the '/{self.name}' command.")
