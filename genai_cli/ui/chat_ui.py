@@ -20,12 +20,13 @@ from asyncio import create_task, sleep
 from collections.abc import Coroutine
 from dataclasses import dataclass, field
 from shutil import get_terminal_size
+from unicodedata import east_asian_width
 
 from genai_cli.ui.style import STYLE
 from genai_cli.ui.style import RICH_THEME
 from genai_cli.enums import Role
 from genai_cli.core.session import Message
-from genai_cli.const import SCROLL_AMOUNT
+from genai_cli.const import SCROLL_AMOUNT, FULL_WIDTH_CHAR_SIZE, HALF_WIDTH_CHAR_SIZE
 
 welcome_message = "\n".join([
     "[welcome-logo]____ ____ _  _ ____ _    ____ _    _[/welcome-logo]",
@@ -84,7 +85,8 @@ class ChatUI:
         input_field (TextArea): Allows the user to type their messages and commands.
         waiting_message_field (Window): Displays a waiting indicator spinner when the application is in a waiting state (e.g., waiting for a response from the model).
         vi_mode_field (Window): Displays the current Vi mode (e.g., NORMAL, INSERT, REPLACE) in a fixed-width area.
-        status_field (TextArea): Displays the status bar. (e.g. the model name or title of the current session, or any other status information)
+        model_name_field (TextArea): Displays the name of the currently active model.
+        session_title_field (TextArea): Displays the title of the current session.
         info_field (TextArea): Displays additional information or messages to the user.
         input_container (HSplit): A container that organizes the input field and info field vertically, separated by horizontal lines.
         on_submit (Callable[[str], Coroutine]): A callback function that is called when the user submits input, receiving the input string as an argument.
@@ -139,8 +141,16 @@ class ChatUI:
             width=16,
             height=1
         )
-        self.status_field = TextArea(
-            style="class:status-field",
+        self.model_name_field = TextArea(
+            style="class:model-name-field",
+            text="",
+            focusable=False,
+            read_only=True,
+            height=1,
+            width=0
+        )
+        self.session_title_field = TextArea(
+            style="class:session-title-field",
             text="",
             focusable=False,
             read_only=True,
@@ -159,7 +169,11 @@ class ChatUI:
         self.input_container = HSplit([
             self.output_field,
             Window(height=1),
-            self.waiting_indicator_field,
+            VSplit([
+                self.waiting_indicator_field,
+                Window(),
+                self.model_name_field
+            ]),
             Window(height=1, char="─", style="class:separator"),
             VSplit([
                 Window(
@@ -172,7 +186,7 @@ class ChatUI:
             VSplit([
                 self.vi_mode_field,
                 Window(),
-                self.status_field
+                self.session_title_field
             ]),
             self.info_field
         ])
@@ -390,6 +404,24 @@ class ChatUI:
             # If the app is not running, we can print directly to the terminal whthout using the prompt_toolkit output field.
             self.stdout_console.print(message if not is_markdown else Markdown(message))
 
+    def _get_text_width(self, text: str) -> int:
+        """Calculate the display width of a string, accounting for wide characters.
+
+        Args:
+            text (str): The input string for which to calculate the display width.
+
+        Return:
+            int: The calculated display width of the input string, accounting for wide characters.
+        """
+        width = 0
+        for c in text:
+            if east_asian_width(c) in ['F', 'W', 'A']:
+                width += FULL_WIDTH_CHAR_SIZE
+            else:
+                width += HALF_WIDTH_CHAR_SIZE
+
+        return width
+
     def print_conversation(self, message: str, role: Role):
         """Print a conversation message to the output field with appropriate formatting based on the role (user or assistant).
 
@@ -438,21 +470,37 @@ class ChatUI:
         for message in histories:
             self.print_conversation(message.content, message.role)
 
-    def update_status_bar(
+    def update_model_name(
         self,
-        status_message: str
+        model_name: str
     ):
-        """Update the status bar with a new message.
+        """Update the model name field with the name of the currently active model.
 
         Args:
-            status_message (str): The message to display in the status bar.
+            model_name (str): The name of the currently active model to display in the model name field.
         """
-        self.status_field.text = status_message
-        self.status_field.window.width = Dimension(
-            preferred=len(status_message)+1,
-            max=len(status_message)+1
+        self.model_name_field.text = f"Model: {model_name}"
+        self.model_name_field.window.width = Dimension(
+            preferred=len(self.model_name_field.text),
+            max=len(self.model_name_field.text)
         )
+
         self.app.invalidate()
+
+    def update_session_title(
+        self,
+        session_title: str
+    ):
+        """Update the session title field with the title of the current session.
+
+        Args:
+            session_title (str): The title of the current session to display in the session title field.
+        """
+        self.session_title_field.text = f"Session: {session_title}"
+        self.session_title_field.window.width = Dimension(
+            preferred=self._get_text_width(self.session_title_field.text),
+            max=self._get_text_width(self.session_title_field.text)
+        )
 
     def update_info(
         self,
@@ -503,8 +551,9 @@ class ChatUI:
 
     def start_app(
         self,
+        model_name: str,
+        session_title: str,
         info_message: str | None = None,
-        status_message: str | None = None
     ):
         """Start the prompt_toolkit application to run the chat UI.
 
@@ -516,8 +565,9 @@ class ChatUI:
         def pre_run():
             if info_message is not None:
                 self.update_info(info_message)
-            if status_message is not None:
-                self.update_status_bar(status_message)
+
+            self.update_model_name(model_name)
+            self.update_session_title(session_title)
 
             self.print_welcome()
 

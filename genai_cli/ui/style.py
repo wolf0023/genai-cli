@@ -38,7 +38,8 @@ STYLE = Style.from_dict({
     "vi-mode-normal": f"bg:default fg:{Mocha.blue} bold",
     "vi-mode-insert": f"bg:default fg:{Mocha.green} bold",
     "vi-mode-replace": f"bg:default fg:{Mocha.red} bold",
-    "status-field": f"bg:default fg:{Mocha.yellow}",
+    "model-name-field": f"bg:default fg:{Mocha.yellow} bold",
+    "session-title-field": f"bg:default fg:{Mocha.yellow} bold",
     "info-field": f"bg:default fg:{Mocha.blue}",
     "separator": f"bg:default fg:{Mocha.blue}",
 
