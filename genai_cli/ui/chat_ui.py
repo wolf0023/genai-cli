@@ -444,6 +444,7 @@ class ChatUI:
         Args:
             error_message (str): The error message.
         """
+        error_message = escape(error_message)
         self.print_message(f"[error]Error: [/error]{error_message}")
 
     def print_command_output(
