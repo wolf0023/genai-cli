@@ -1,0 +1,28 @@
+SCHEMA = {
+    "type": "object",
+    "description": "Configuration schema for the GenAI CLI tool.",
+    "properties": {
+        "default_model": {
+            "type": "string",
+            "description": "The default model to use for generating responses."
+        },
+        "system_prompt": {
+            "type": "string",
+            "description": "The system prompt that sets the context for the AI assistant."
+        },
+        "history_len": {
+            "type": "integer",
+            "description": "The number of previous interactions to keep in the conversation history."
+        },
+        "start_with_last_session": {
+            "type": "boolean",
+            "description": "Whether to start a new session with the last session's history."
+        },
+        "your_name": {
+            "type": "string",
+            "description": "The name to refer to the user in the conversation."
+        }
+    },
+    "required": ["default_model", "system_prompt", "history_len", "start_with_last_session", "your_name"]
+}
+
