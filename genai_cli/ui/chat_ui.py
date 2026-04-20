@@ -502,6 +502,8 @@ class ChatUI:
             max=self._get_text_width(self.session_title_field.text)
         )
 
+        self.app.invalidate()
+
     def update_info(
         self,
         info_message: str
