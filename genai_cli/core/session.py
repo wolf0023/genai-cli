@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 from datetime import datetime
+from uuid import uuid4
+from uuid import UUID
 
 from genai_cli.enums import Role
 from genai_cli.const import DEFAULT_SESSION_TITLE
@@ -59,14 +61,14 @@ class Session:
         created_at (str): Creation timestamp of the conversation.
         updated_at (str): Last updated timestamp of the conversation.
         messages (list[Message]): List of messages in the conversation.
-        filename (str|None): Optional filename that is associated with the session.
+        id (UUID): UUID that is associated with the session.
     """
     title: str
     model: str
     created_at: str
     updated_at: str
     messages: list[Message]
-    filename: str|None = None
+    id: UUID
 
     @classmethod
     def create_obj(
@@ -76,7 +78,7 @@ class Session:
         created_at: str,
         updated_at: str,
         messages: list[dict[str, str]],
-        filename: str|None = None
+        id: UUID|None
     ) -> 'Session':
         """ Create a Session instance from given parameters
         Args:
@@ -85,12 +87,16 @@ class Session:
             created_at (str): Creation timestamp of the conversation.
             updated_at (str): Last updated timestamp of the conversation.
             messages (list[dict[str, str]]): List of messages in the conversation.
-            filename (str|None): Optional filename that is associated with the session.
+            id (UUID|None): UUID that is associated with the session.
         Returns:
             Session: The created Session instance.
         """
         # Create message objects
         message_objects = [Message.create_obj(**msg) for msg in messages]
+
+        # Generate a new UUID if not provided
+        if id is None:
+            id = uuid4()
 
         return cls(
             title=title,
@@ -98,7 +104,7 @@ class Session:
             created_at=created_at,
             updated_at=updated_at,
             messages=message_objects,
-            filename=filename
+            id=id
         )
 
     def append_message(
@@ -189,13 +195,15 @@ class SessionManager:
         # Get current
         time_now: str = datetime.now().isoformat(' ', timespec='seconds')
 
-        session = Session(
+        session = Session.create_obj(
             title=title,
             model=model,
             created_at=time_now,
             updated_at=time_now,
-            messages=[]
+            messages=[],
+            id=None
         )
+
         # Set current session
         self.current_session = session
 
