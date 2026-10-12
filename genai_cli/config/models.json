@@ -1,0 +1,12 @@
+{
+    "models": {
+        "gemini_pro": {
+            "model_id": "gemini/gemini-3.1-pro-preview",
+            "thinking": "medium"
+        },
+        "gemini_flash": {
+            "model_id": "gemini/gemini-3-flash-preview",
+            "thinking": "high"
+        }
+    }
+}

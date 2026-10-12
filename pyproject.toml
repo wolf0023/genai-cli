@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "genai-cli"
+version = "1.0.0"
+authors = [
+    {name = "wolf0023"}
+]
+description = "A chat tool in terminal based on genai api"
+readme = "README.md"
+requires-python = ">=3.11"
+license-files = ["LICENSE"]
+dependencies = [
+    "litellm",
+    "rich",
+    "prompt_toolkit",
+    "python-dotenv",
+    "platformdirs",
+    "typing-extensions",
+    "jsonschema",
+    "pytest"
+]
+
+[project.urls]
+Homepage = "https://github.com/wolf0023/genai-cli"
+
+[project.scripts]
+genai-cli = "genai_cli.app:main"
