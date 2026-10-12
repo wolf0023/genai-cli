@@ -243,6 +243,9 @@ class SessionManager:
         if self.current_session is None:
             raise ValueError("No session is currently loaded.")
 
+        if not model_name:
+            raise ValueError("Model name cannot be empty.")
+
         self.current_session.model = model_name
         timestamp_str = datetime.now().isoformat(sep=' ', timespec='seconds')
         self.current_session.updated_at = timestamp_str
