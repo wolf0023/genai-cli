@@ -401,7 +401,7 @@ class ChatUI:
             # Scroll to the bottom after printing a message.
             self._scroll_to_bottom()
         else:
-            # If the app is not running, we can print directly to the terminal whthout using the prompt_toolkit output field.
+            # If the app is not running, we can print directly to the terminal without using the prompt_toolkit output field.
             self.stdout_console.print(message if not is_markdown else Markdown(message))
 
     def _get_text_width(self, text: str) -> int:
@@ -410,7 +410,7 @@ class ChatUI:
         Args:
             text (str): The input string for which to calculate the display width.
 
-        Return:
+        Returns:
             int: The calculated display width of the input string, accounting for wide characters.
         """
         width = 0
@@ -561,8 +561,9 @@ class ChatUI:
         """Start the prompt_toolkit application to run the chat UI.
 
         Args:
+            model_name (str): The model name to display in the UI.
+            session_title (str): The session title to display in the UI.
             info_message (str | None): An optional message to display in the info field when the application starts.
-            status_message (str | None): An optional message to display in the status bar when the application starts.
         """
         # Define a pre-run function to update the info and status bar with the provided messages before the application starts.
         def pre_run():
