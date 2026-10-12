@@ -3,6 +3,7 @@ from enum import IntEnum
 from litellm.exceptions import AuthenticationError, RateLimitError, BadRequestError, UnsupportedParamsError
 import dotenv
 from jsonschema import ValidationError
+import litellm
 
 from genai_cli.core.session import SessionManager
 from genai_cli.core.history import HistoryStorage
@@ -416,6 +417,9 @@ def main():
     # This is necessary to ensure that any required API keys or configurations are available.
     # Please check LiteLLM documentation for more details on required environment variables.
     dotenv.load_dotenv()
+
+    # Disable debug-level logs from litellm
+    litellm.suppress_debug_info = True
 
     # Initialize the ChatApp and start the chat session.
     chat_app = ChatApp()
