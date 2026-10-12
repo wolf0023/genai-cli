@@ -15,11 +15,15 @@ class ThinkingLevel(StrEnum):
         LOW: Low thinking mode.
         MEDIUM: Medium thinking mode.
         HIGH: High thinking mode.
+        XHIGH: Xhigh thinking mode.
+        MAX: Max thinking mode.
     """
     NONE = "none"
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
+    XHIGH = "xhigh"
+    MAX = "max"
 
 @dataclass
 class Model:

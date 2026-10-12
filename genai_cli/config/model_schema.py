@@ -14,7 +14,7 @@ SCHEMA = {
                     },
                     "thinking": {
                         "type": ["string", "null"],
-                        "enum": ["none", "low", "medium", "high", None],
+                        "enum": ["none", "low", "medium", "high", "xhigh", "max", None],
                         "description": "The thinking level for the model. Set null to disable reasoning_effort for models that do not support it."
                     }
                 },

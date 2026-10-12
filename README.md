@@ -61,7 +61,7 @@ The syntax is as follows.
     "models": {
         "Model name within the application": {
             "model_id": "Model ID supported by LiteLLM",
-            "thinking": "low|medium|high|none|null"
+            "thinking": "low|medium|high|xhigh|max|none|null"
         }
     }
 }
