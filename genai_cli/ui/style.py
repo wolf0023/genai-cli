@@ -59,7 +59,7 @@ RICH_THEME = Theme({
     "command-header": f"bold {Mocha.peach}",
     "command-output": f"{Mocha.lavender}",
     "command-output-emphasis": f"bold {Mocha.yellow}",
-    "command-list": f"{Mocha.text}",
+    "command-list": f"not bold {Mocha.text}",
     "error": f"bold {Mocha.red}",
     # Markdown elements
     "markdown.block_quote": Mocha.maroon,
